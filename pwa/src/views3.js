@@ -12,7 +12,7 @@ Views.more = async () => {
       mrow('stats', 'bars', 'Statistics', 'Practice overview') + mrow('reports', 'download', 'Reports &amp; Export', 'CSV files, printable lists') +
       mrow('backup', 'shield', 'Backup &amp; Restore', 'Keep your data safe') + mrow('settings', 'sliders', 'Settings', 'Lock, sample data, storage') +
       mrow('privacy', 'lock', 'Privacy &amp; Security', 'How your data is handled') + mrow('help', 'help', 'Help &amp; About', 'Version ' + APP_VERSION) +
-      '<div style="height:8px"></div><button class="btn o" data-act="lock">' + ic('lock', 18) + ' Lock now</button>', true) + navbar('more'),
+      '<div style="height:8px"></div><button class="btn o" data-act="lock">' + ic('lock', 18) + ' Lock now</button>' + copyFoot(), true) + navbar('more'),
     acts: {
       doctor: () => go('doctor'), stats: () => go('stats'), reports: () => go('reports'), backup: () => go('backup'),
       settings: () => go('settings'), privacy: () => go('privacy'), help: () => go('help'), lock: () => lockNow()
@@ -157,7 +157,7 @@ Views.privacy = async () => {
 
 Views.help = async () => ({
   html: hdr('Help & About') + wrapPage(
-    '<div style="text-align:center;margin:8px 0 16px">' + LOGO(false, 72) + '<h2 style="margin:8px 0 2px">UroVault</h2><div class="small">Version ' + APP_VERSION + ' &middot; Your Urology Practice, Organised.</div></div>' +
+    '<div style="text-align:center;margin:8px 0 16px">' + LOGO(false, 72) + '<h2 style="margin:8px 0 2px">UroVault</h2><div class="small">Version ' + APP_VERSION + ' &middot; Your Urology Practice, Organised.</div><div class="small" style="margin-top:6px">' + COPYRIGHT + '</div></div>' +
     '<div class="card"><b>Install on iPhone</b><div class="small" style="color:var(--navy);margin-top:6px">Open this page in Safari, tap Share, then <b>Add to Home Screen</b>. Open it from the icon afterwards.</div></div>' +
     '<div class="card"><b>Getting updates</b><div class="small" style="color:var(--navy);margin-top:6px">After a new version is published, fully close the app and reopen it twice. Your data is kept.</div></div>' +
     '<div class="card"><b>Registering quickly</b><div class="small" style="color:var(--navy);margin-top:6px">Tap the + button, enter UHID, name, age, sex and complaints, then pick the diagnosis with one tap. Everything else can be added later from the patient profile.</div></div>' +

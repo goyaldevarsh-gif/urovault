@@ -14,7 +14,7 @@ Views.onboarding = async () => ({
     '<div class="card feat"><div class="iconbox">' + ic('users', 22) + '</div><div><div class="t">Fast patient registration</div><div class="s">UHID-first, one-tap diagnosis</div></div></div>' +
     '<div class="card feat"><div class="iconbox">' + ic('camera', 22) + '</div><div><div class="t">Images, reports &amp; surgeries</div><div class="s">Everything for a patient in one place</div></div></div>' +
     '<div class="card feat"><div class="iconbox">' + ic('lock', 22) + '</div><div><div class="t">Private &amp; offline</div><div class="s">Data stays on this device</div></div></div>' +
-    '<div style="height:10px"></div><button class="btn" data-act="start">Get Started</button>' + iosTip() + '</div></div>',
+    '<div style="height:10px"></div><button class="btn" data-act="start">Get Started</button>' + iosTip() + copyFoot() + '</div></div>',
   acts: { start: () => replace('signup') }
 });
 
@@ -46,7 +46,7 @@ Views.login = async () => {
       '<label class="lbl" style="margin-top:0">Email or username</label><input class="inp" id="li" autocapitalize="none" autocomplete="username" value="' + esc(a.id) + '">' +
       '<label class="lbl">Password</label><div class="pwrap"><input class="inp" id="lp" type="password" autocomplete="current-password"><button type="button" data-act="eye">' + ic('eye', 20) + '</button></div>' +
       '<div class="ferr" id="lerr"></div><div style="height:18px"></div><button class="btn" data-act="unlock">Unlock</button>' +
-      '<div style="text-align:center;margin-top:16px"><button class="linkbtn" data-act="forgot">Forgot password?</button></div></div></div>',
+      '<div style="text-align:center;margin-top:16px"><button class="linkbtn" data-act="forgot">Forgot password?</button></div>' + copyFoot() + '</div></div>',
     acts: {
       eye: () => { const i = $('#lp'); i.type = i.type === 'password' ? 'text' : 'password'; },
       unlock: async () => {

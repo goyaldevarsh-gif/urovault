@@ -1,9 +1,12 @@
 <!DOCTYPE html>
+<!-- UroVault (c) 2026 Dr. Devarsh Goyal. All rights reserved. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>UroVault</title>
+<meta name="author" content="Dr. Devarsh Goyal">
+<meta name="copyright" content="(c) 2026 Dr. Devarsh Goyal. All rights reserved.">
 <meta name="description" content="UroVault - Your Urology Practice, Organised.">
 <meta name="theme-color" content="#0F2942">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -224,7 +227,9 @@ input[type=date].inp{min-height:50px;display:block;text-align:left;-webkit-min-l
 <script>
 'use strict';
 /* ===================== UroVault PWA - core: utils, icons, db, repo ===================== */
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.0.1';
+const COPYRIGHT = '&copy; 2026 Dr. Devarsh Goyal. All rights reserved.';
+const copyFoot = () => '<div class="small" style="text-align:center;margin:22px 0 4px;opacity:.85">' + COPYRIGHT + '<br>UroVault v' + APP_VERSION + '</div>';
 
 const DX_OPTIONS = [
   { name: 'Ureterocele', icon: 'ureterocele', paired: true, group: 'Renal' },
@@ -921,7 +926,7 @@ Views.onboarding = async () => ({
     '<div class="card feat"><div class="iconbox">' + ic('users', 22) + '</div><div><div class="t">Fast patient registration</div><div class="s">UHID-first, one-tap diagnosis</div></div></div>' +
     '<div class="card feat"><div class="iconbox">' + ic('camera', 22) + '</div><div><div class="t">Images, reports &amp; surgeries</div><div class="s">Everything for a patient in one place</div></div></div>' +
     '<div class="card feat"><div class="iconbox">' + ic('lock', 22) + '</div><div><div class="t">Private &amp; offline</div><div class="s">Data stays on this device</div></div></div>' +
-    '<div style="height:10px"></div><button class="btn" data-act="start">Get Started</button>' + iosTip() + '</div></div>',
+    '<div style="height:10px"></div><button class="btn" data-act="start">Get Started</button>' + iosTip() + copyFoot() + '</div></div>',
   acts: { start: () => replace('signup') }
 });
 
@@ -953,7 +958,7 @@ Views.login = async () => {
       '<label class="lbl" style="margin-top:0">Email or username</label><input class="inp" id="li" autocapitalize="none" autocomplete="username" value="' + esc(a.id) + '">' +
       '<label class="lbl">Password</label><div class="pwrap"><input class="inp" id="lp" type="password" autocomplete="current-password"><button type="button" data-act="eye">' + ic('eye', 20) + '</button></div>' +
       '<div class="ferr" id="lerr"></div><div style="height:18px"></div><button class="btn" data-act="unlock">Unlock</button>' +
-      '<div style="text-align:center;margin-top:16px"><button class="linkbtn" data-act="forgot">Forgot password?</button></div></div></div>',
+      '<div style="text-align:center;margin-top:16px"><button class="linkbtn" data-act="forgot">Forgot password?</button></div>' + copyFoot() + '</div></div>',
     acts: {
       eye: () => { const i = $('#lp'); i.type = i.type === 'password' ? 'text' : 'password'; },
       unlock: async () => {
@@ -1475,7 +1480,7 @@ Views.more = async () => {
       mrow('stats', 'bars', 'Statistics', 'Practice overview') + mrow('reports', 'download', 'Reports &amp; Export', 'CSV files, printable lists') +
       mrow('backup', 'shield', 'Backup &amp; Restore', 'Keep your data safe') + mrow('settings', 'sliders', 'Settings', 'Lock, sample data, storage') +
       mrow('privacy', 'lock', 'Privacy &amp; Security', 'How your data is handled') + mrow('help', 'help', 'Help &amp; About', 'Version ' + APP_VERSION) +
-      '<div style="height:8px"></div><button class="btn o" data-act="lock">' + ic('lock', 18) + ' Lock now</button>', true) + navbar('more'),
+      '<div style="height:8px"></div><button class="btn o" data-act="lock">' + ic('lock', 18) + ' Lock now</button>' + copyFoot(), true) + navbar('more'),
     acts: {
       doctor: () => go('doctor'), stats: () => go('stats'), reports: () => go('reports'), backup: () => go('backup'),
       settings: () => go('settings'), privacy: () => go('privacy'), help: () => go('help'), lock: () => lockNow()
@@ -1620,7 +1625,7 @@ Views.privacy = async () => {
 
 Views.help = async () => ({
   html: hdr('Help & About') + wrapPage(
-    '<div style="text-align:center;margin:8px 0 16px">' + LOGO(false, 72) + '<h2 style="margin:8px 0 2px">UroVault</h2><div class="small">Version ' + APP_VERSION + ' &middot; Your Urology Practice, Organised.</div></div>' +
+    '<div style="text-align:center;margin:8px 0 16px">' + LOGO(false, 72) + '<h2 style="margin:8px 0 2px">UroVault</h2><div class="small">Version ' + APP_VERSION + ' &middot; Your Urology Practice, Organised.</div><div class="small" style="margin-top:6px">' + COPYRIGHT + '</div></div>' +
     '<div class="card"><b>Install on iPhone</b><div class="small" style="color:var(--navy);margin-top:6px">Open this page in Safari, tap Share, then <b>Add to Home Screen</b>. Open it from the icon afterwards.</div></div>' +
     '<div class="card"><b>Getting updates</b><div class="small" style="color:var(--navy);margin-top:6px">After a new version is published, fully close the app and reopen it twice. Your data is kept.</div></div>' +
     '<div class="card"><b>Registering quickly</b><div class="small" style="color:var(--navy);margin-top:6px">Tap the + button, enter UHID, name, age, sex and complaints, then pick the diagnosis with one tap. Everything else can be added later from the patient profile.</div></div>' +

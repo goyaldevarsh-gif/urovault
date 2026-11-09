@@ -56,3 +56,6 @@ A installable web-app build lives in `docs/` (served by GitHub Pages) with sourc
 3. Rebuild after editing sources: `python3 pwa/build.py` (bump `CACHE` in `docs/sw.js` for updates).
 
 Data is stored on-device (IndexedDB). Use More → Backup & Restore regularly.
+
+---
+&copy; 2026 Dr. Devarsh Goyal. All rights reserved.

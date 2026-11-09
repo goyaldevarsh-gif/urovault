@@ -10,11 +10,14 @@ js = '\n'.join((src / f).read_text() for f in ['core.js', 'ui.js', 'views1.js', 
 js = js.replace("'use strict';\n", '')
 js = "'use strict';\n" + js
 html = f'''<!DOCTYPE html>
+<!-- UroVault (c) 2026 Dr. Devarsh Goyal. All rights reserved. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>UroVault</title>
+<meta name="author" content="Dr. Devarsh Goyal">
+<meta name="copyright" content="(c) 2026 Dr. Devarsh Goyal. All rights reserved.">
 <meta name="description" content="UroVault - Your Urology Practice, Organised.">
 <meta name="theme-color" content="#0F2942">
 <meta name="apple-mobile-web-app-capable" content="yes">
