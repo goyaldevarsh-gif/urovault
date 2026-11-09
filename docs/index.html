@@ -1,0 +1,1654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>UroVault</title>
+<meta name="description" content="UroVault - Your Urology Practice, Organised.">
+<meta name="theme-color" content="#0F2942">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="UroVault">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+@font-face{font-family:Inter;font-weight:400;font-display:swap;src:url(fonts/Inter-400.woff2) format("woff2")}
+@font-face{font-family:Inter;font-weight:500;font-display:swap;src:url(fonts/Inter-500.woff2) format("woff2")}
+@font-face{font-family:Inter;font-weight:600;font-display:swap;src:url(fonts/Inter-600.woff2) format("woff2")}
+@font-face{font-family:Inter;font-weight:700;font-display:swap;src:url(fonts/Inter-700.woff2) format("woff2")}
+:root{
+  --navy:#0F2942;--navy2:#0B4A55;--teal:#0D9488;--btn:#0B8378;--link:#0F766E;--lt:#E6F7F5;
+  --bg:#F8FAFC;--t2:#64748B;--red:#EF4444;--redd:#B91C1C;--green:#10B981;--greend:#047857;--amber:#F59E0B;--amberd:#B45309;
+  --bd:#E2E8F0;--redt:#FEE2E2;--greent:#D1FAE5;--ambert:#FEF3C7;--grey:#F1F5F9;
+  --r:16px;--sh:0 3px 12px rgba(15,41,66,.06);
+  --sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--navy);font-family:Inter,-apple-system,"SF Pro Text",system-ui,sans-serif;font-size:15px;line-height:1.4;-webkit-text-size-adjust:100%;overscroll-behavior-y:none}
+button{font-family:inherit;cursor:pointer}
+a{color:inherit;text-decoration:none}
+input,textarea,select{font-family:inherit;font-size:16px;color:var(--navy)}
+.ic{display:inline-block;vertical-align:middle;flex:none}
+#app{min-height:100vh;min-height:100dvh}
+.hdr{position:sticky;top:0;z-index:20;background:var(--navy);color:#fff;padding-top:var(--sat)}
+.hdr .in{max-width:640px;margin:0 auto;height:52px;display:flex;align-items:center;gap:4px;padding:0 8px}
+.hdr h1{flex:1;margin:0;text-align:center;font-size:17px;font-weight:600;letter-spacing:.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr .ib{width:44px;height:44px;border:0;background:none;color:#fff;display:flex;align-items:center;justify-content:center;border-radius:12px}
+.hdr .ib:active{background:rgba(255,255,255,.14)}
+.hdr .sp{width:44px}
+.wrap{max-width:640px;margin:0 auto;padding:0 16px}
+.page{padding-top:14px;padding-bottom:calc(96px + var(--sab))}
+.page.nobar{padding-bottom:calc(28px + var(--sab))}
+.dhead{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;border-radius:0 0 28px 28px;padding-top:var(--sat)}
+.dhead .in{max-width:640px;margin:0 auto;padding:6px 16px 22px}
+.dhead .top{display:flex;align-items:center;gap:8px;height:48px}
+.dhead .brand{font-size:18px;font-weight:700;flex:1}
+.dhead .ib{width:44px;height:44px;border:0;background:none;color:#fff;display:flex;align-items:center;justify-content:center;border-radius:12px;position:relative}
+.dhead .ib:active{background:rgba(255,255,255,.14)}
+.dot{position:absolute;top:9px;right:10px;min-width:16px;height:16px;border-radius:8px;background:var(--red);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.greet{font-size:26px;font-weight:700;line-height:1.2;margin:6px 0 18px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{background:#fff;color:var(--navy);border-radius:16px;padding:14px 6px 12px;text-align:center;border:0;box-shadow:0 6px 16px rgba(0,0,0,.14)}
+.stat .n{font-size:26px;font-weight:700;line-height:1.1;margin-top:4px}
+.stat .l{font-size:12px;color:var(--t2);font-weight:500}
+.stat .ic{color:var(--teal)}
+.card{background:#fff;border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);padding:16px;margin-bottom:10px}
+.card.tap{cursor:pointer}.card.tap:active{background:#F1F5F9}
+.card.sel{background:var(--lt);border-color:var(--teal)}
+.tile{display:flex;align-items:center;gap:12px;padding:12px 14px}
+.tile .grow{flex:1;min-width:0}
+.t-name{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-sub{font-size:12.5px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-sub b{color:var(--navy);font-weight:600}
+.avatar{width:44px;height:44px;border-radius:50%;background:var(--lt);color:var(--link);font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;flex:none}
+.avatar.lg{width:54px;height:54px;font-size:18px}
+.iconbox{width:42px;height:42px;border-radius:12px;background:var(--lt);color:var(--teal);display:flex;align-items:center;justify-content:center;flex:none}
+.sec{display:flex;align-items:center;margin:22px 0 10px}
+.sec h2{flex:1;margin:0;font-size:15px;font-weight:700}
+.sec a,.sec button{background:none;border:0;color:var(--link);font-weight:600;font-size:13px;padding:6px 0}
+.small{font-size:12.5px;color:var(--t2)}
+.muted{color:var(--t2)}
+.lbl{display:block;font-size:11px;font-weight:700;letter-spacing:.7px;color:var(--t2);text-transform:uppercase;margin:16px 0 6px}
+.lbl i{color:var(--red);font-style:normal}
+.pill{display:inline-block;padding:3px 10px;border-radius:20px;background:var(--lt);color:var(--link);font-size:11.5px;font-weight:600;white-space:nowrap}
+.pill.red{background:var(--redt);color:var(--redd)}.pill.green{background:var(--greent);color:var(--greend)}.pill.amber{background:var(--ambert);color:var(--amberd)}.pill.grey{background:var(--grey);color:var(--navy)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 16px 8px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips.wrapchips{flex-wrap:wrap;overflow:visible;padding:0}
+.chip{flex:none;border:1.5px solid var(--bd);background:#fff;color:var(--navy);padding:8px 14px;border-radius:20px;font-size:13.5px;font-weight:600}
+.chip.on{background:var(--btn);border-color:var(--btn);color:#fff}
+.chip .c{opacity:.75;margin-left:6px;font-weight:600}
+.chip.sm{padding:6px 11px;font-size:12.5px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:52px;border:0;border-radius:14px;background:var(--btn);color:#fff;font-size:16px;font-weight:600}
+.btn:active{filter:brightness(.92)}.btn[disabled]{opacity:.55}
+.btn.o{background:#fff;color:var(--link);border:1.5px solid var(--btn);height:46px;font-size:14px}
+.btn.red{background:var(--red)}
+.btn.sm{height:40px;font-size:13.5px;border-radius:12px}
+.row{display:flex;gap:10px}.row>*{flex:1;min-width:0}
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:15;background:#fff;border-top:1px solid var(--bd);padding:10px 16px calc(10px + var(--sab))}
+.bar .in{max-width:608px;margin:0 auto}
+.linkbtn{background:none;border:0;color:var(--link);font-weight:600;font-size:13px;padding:4px 0}
+.inp,.ta,.sel{width:100%;background:#fff;border:1.5px solid var(--bd);border-radius:12px;padding:13px 14px;outline:none;-webkit-appearance:none;appearance:none}
+.inp:focus,.ta:focus,.sel:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,148,136,.15)}
+.ta{min-height:104px;resize:vertical;line-height:1.45}
+.inp.err,.ta.err{border-color:var(--red)}
+.inp.uhid{font-size:22px;font-weight:700;letter-spacing:.8px;background:var(--lt);border:2px solid var(--teal);padding:16px;border-radius:14px;text-transform:uppercase}
+.inp.uhid.err{border-color:var(--red);background:var(--redt)}
+.ferr{color:var(--redd);font-size:12.5px;margin-top:5px;font-weight:500}
+.dup{margin-top:8px;padding:11px 12px;background:var(--redt);color:var(--redd);border-radius:10px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px}
+.dup button{margin-left:auto;background:none;border:0;color:var(--redd);font-weight:700}
+.seg{display:flex;gap:6px}.seg button{flex:1;height:50px;border-radius:12px;border:1.5px solid var(--bd);background:#fff;font-size:14px;font-weight:600;color:var(--navy)}
+.seg button.on{background:var(--btn);border-color:var(--btn);color:#fff}
+.seg.err button{border-color:var(--red)}
+.two{display:grid;grid-template-columns:2fr 5fr;gap:14px}
+.banner{display:flex;align-items:center;gap:8px;background:var(--lt);padding:9px 12px;border-radius:10px;font-size:13px;margin-bottom:6px}
+.banner button{margin-left:auto;background:none;border:0;color:var(--link);font-weight:600}
+.chk{width:24px;height:24px;border-radius:7px;border:2px solid #CBD5E1;display:flex;align-items:center;justify-content:center;color:#fff;flex:none}
+.chk.r{border-radius:50%}.chk.on{background:var(--btn);border-color:var(--btn)}
+.irow{display:flex;gap:14px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--bd)}
+.irow:last-child{border-bottom:0}
+.irow .ic{color:var(--teal);margin-top:2px}
+.irow .k{font-size:12px;color:var(--t2)}.irow .v{font-weight:600;font-size:14.5px;overflow-wrap:anywhere}
+.tabs{display:flex;overflow-x:auto;background:#fff;border-bottom:1px solid var(--bd);scrollbar-width:none;position:sticky;top:calc(52px + var(--sat));z-index:12}
+.tabs::-webkit-scrollbar{display:none}
+.tabs .in{display:flex;max-width:640px;margin:0 auto;width:100%;padding:0 6px}
+.tab{flex:1;flex-shrink:0;border:0;background:none;padding:13px 8px;font-size:13.5px;font-weight:500;color:var(--t2);border-bottom:3px solid transparent;white-space:nowrap}
+.tab.on{color:var(--link);font-weight:700;border-color:var(--teal)}
+.phead{display:flex;gap:12px;align-items:center}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.mi{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--grey);border:0;padding:0}
+.mi img{width:100%;height:100%;object-fit:cover;display:block}
+.mi .cap{position:absolute;left:0;right:0;bottom:0;padding:14px 6px 5px;background:linear-gradient(transparent,rgba(0,0,0,.65));color:#fff;font-size:10.5px;font-weight:600;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mi.file{display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--lt);color:var(--teal);gap:4px;font-size:11px;padding:6px;text-align:center}
+.thumbs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.th{position:relative;width:64px;height:64px;border-radius:10px;overflow:hidden;background:var(--grey);border:0;padding:0}
+.th img{width:100%;height:100%;object-fit:cover;display:block}
+.th.file{display:flex;align-items:center;justify-content:center;background:var(--lt);color:var(--teal)}
+.th .x{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:var(--navy);color:#fff;border:0;padding:0;display:flex;align-items:center;justify-content:center}
+.th .x.red{background:var(--red)}
+.viewer{position:fixed;inset:0;z-index:100;background:#000;display:flex;flex-direction:column}
+.viewer .vt{display:flex;align-items:center;padding:calc(6px + var(--sat)) 8px 6px;color:#fff;background:#000}
+.viewer .vt .ib{width:44px;height:44px;border:0;background:none;color:#fff;display:flex;align-items:center;justify-content:center}
+.viewer .vt .cnt{flex:1;text-align:center;font-size:14px;font-weight:600}
+.viewer .stage{flex:1;position:relative;overflow:hidden;touch-action:none}
+.viewer .stage img{position:absolute;left:50%;top:50%;max-width:100%;max-height:100%;transform-origin:center;will-change:transform;user-select:none;-webkit-user-drag:none}
+.viewer .vb{padding:12px 18px calc(12px + var(--sab));background:#0B1B2D;color:#fff;font-size:14px}
+.viewer .nav{position:absolute;top:50%;width:44px;height:64px;margin-top:-32px;border:0;background:rgba(0,0,0,.35);color:#fff;display:flex;align-items:center;justify-content:center}
+.tl{position:relative;padding-left:30px}
+.tl:before{content:"";position:absolute;left:11px;top:10px;bottom:10px;width:2px;background:var(--bd)}
+.tl .ev{position:relative;margin-bottom:10px}
+.tl .ev:before{content:"";position:absolute;left:-25px;top:18px;width:12px;height:12px;border-radius:50%;background:var(--teal);border:2px solid var(--teal)}
+.tl .ev.hollow:before{background:#fff}
+.tl .ev.red:before{background:var(--red);border-color:var(--red)}.tl .ev.green:before{background:var(--green);border-color:var(--green)}
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid var(--bd);padding-bottom:var(--sab)}
+.nav .in{max-width:640px;margin:0 auto;height:62px;display:flex;align-items:center}
+.nav button{flex:1;height:62px;border:0;background:none;color:var(--t2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:500}
+.nav button.on{color:var(--link);font-weight:700}
+.nav .plus{flex:1;display:flex;justify-content:center}
+.nav .plus button{flex:none;width:52px;height:52px;border-radius:50%;background:var(--btn);color:#fff;box-shadow:0 5px 14px rgba(13,148,136,.4);margin-top:-6px}
+.empty{text-align:center;padding:40px 24px}
+.empty .ring{width:76px;height:76px;border-radius:50%;background:var(--lt);color:var(--teal);display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px}
+.empty h3{margin:0 0 6px;font-size:16px}
+.empty p{margin:0 0 16px;color:var(--t2);font-size:13.5px}
+.empty .btn{width:auto;display:inline-flex;padding:0 26px}
+.mrow{display:flex;align-items:center;gap:14px;cursor:pointer}
+.mrow .grow{flex:1}
+.mrow .t{font-weight:600}.mrow .s{font-size:12.5px;color:var(--t2)}
+.qa{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.qa button{background:#fff;border:1px solid var(--bd);border-radius:16px;box-shadow:var(--sh);padding:16px 6px 12px;display:flex;flex-direction:column;align-items:center;gap:8px;font-weight:600;font-size:13px;color:var(--navy)}
+.qa button:active{background:#F1F5F9}
+.qa .iconbox{width:46px;height:46px;border-radius:14px}
+.dxcard{display:flex;align-items:center;gap:14px;cursor:pointer}
+.dxcard .nm{flex:1;font-weight:600;font-size:15px}
+.dxcard .iconbox{background:#fff;border:1px solid var(--bd)}
+.card.sel .iconbox{border-color:var(--teal)}
+.sub{margin-top:12px;padding-top:12px;border-top:1px dashed #99D5CF}
+.bars .br{display:flex;align-items:center;gap:10px;padding:6px 0}
+.bars .nm{width:112px;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bars .tr{flex:1;height:10px;border-radius:6px;background:var(--lt);overflow:hidden}
+.bars .tr i{display:block;height:100%;background:var(--teal);border-radius:6px}
+.bars b{width:28px;text-align:right}
+.scrim{position:fixed;inset:0;z-index:60;background:rgba(15,41,66,.5);display:flex;align-items:flex-end;justify-content:center;animation:fade .15s}
+.sheet{background:#fff;width:100%;max-width:640px;border-radius:22px 22px 0 0;padding:8px 20px calc(18px + var(--sab));max-height:88vh;overflow:auto;animation:up .2s}
+.sheet .grab{width:40px;height:4px;border-radius:2px;background:#CBD5E1;margin:4px auto 14px}
+.sheet h3{margin:0 0 4px;font-size:18px}
+.modal{background:#fff;border-radius:18px;max-width:340px;width:calc(100% - 40px);padding:20px;align-self:center;animation:pop .15s}
+.modal h3{margin:0 0 8px;font-size:17px}.modal p{margin:0 0 18px;color:#334155;font-size:14.5px}
+.modal .row .btn{height:44px;font-size:15px}
+.scrim.mid{align-items:center}
+.toast{position:fixed;left:50%;bottom:calc(86px + var(--sab));transform:translateX(-50%);z-index:90;background:var(--navy);color:#fff;padding:12px 18px;border-radius:12px;font-size:14px;font-weight:500;max-width:calc(100% - 32px);box-shadow:0 6px 20px rgba(0,0,0,.25);animation:fade .2s}
+.busy{position:fixed;inset:0;z-index:95;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;font-weight:600}
+.spin{width:34px;height:34px;border:4px solid var(--lt);border-top-color:var(--teal);border-radius:50%;animation:rot .8s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+@keyframes pop{from{transform:scale(.94);opacity:0}to{transform:none;opacity:1}}
+.splash{position:fixed;inset:0;background:linear-gradient(180deg,var(--navy),#0B3B4F);display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff;overflow:hidden}
+.splash .lg{animation:pop .9s cubic-bezier(.2,.9,.3,1.2)}
+.splash h1{font-size:38px;margin:16px 0 6px;font-weight:700;animation:fade 1.2s}
+.splash p{margin:0;opacity:.8;font-size:14px;animation:fade 1.6s}
+.splash svg.wave{position:absolute;left:0;right:0;bottom:0;width:100%;height:30%}
+.auth{min-height:100vh;min-height:100dvh;background:#fff;padding:calc(30px + var(--sat)) 24px calc(30px + var(--sab))}
+.auth .in{max-width:420px;margin:0 auto}
+.auth .logo{text-align:center}
+.auth h1{text-align:center;margin:0;font-size:28px}
+.auth .sub2{text-align:center;color:var(--t2);margin:6px 0 26px}
+.pwrap{position:relative}.pwrap button{position:absolute;right:6px;top:6px;width:42px;height:42px;border:0;background:none;color:var(--t2)}
+.feat{display:flex;gap:14px;align-items:center;padding:12px 14px}
+.feat .t{font-weight:600}.feat .s{font-size:12.5px;color:var(--t2)}
+.ios{margin-top:22px;padding:12px;background:var(--lt);border-radius:12px;font-size:13px;display:flex;gap:10px;align-items:flex-start}
+@media print{
+  .hdr,.bar,.nav,.toast,.noprint{display:none!important}
+  body{background:#fff}.card{box-shadow:none;border:1px solid #ccc}.page{padding:0}
+}
+input[type=date].inp{min-height:50px;display:block;text-align:left;-webkit-min-logical-width:calc(100% - 2px)}
+.fab-row{display:flex;gap:8px}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--bd);font-size:14px}
+.kv:last-child{border-bottom:0}.kv span:first-child{color:var(--t2)}.kv span:last-child{font-weight:600;text-align:right}
+.sw{width:50px;height:30px;border-radius:15px;background:#CBD5E1;border:0;position:relative;flex:none;transition:.15s}
+.sw:after{content:"";position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:.15s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.sw.on{background:var(--btn)}.sw.on:after{left:23px}
+.pre{white-space:pre-wrap;overflow-wrap:anywhere}
+.big-date{font-size:20px;font-weight:700}
+.sticky-search{position:sticky;top:calc(52px + var(--sat));z-index:11;background:var(--bg);padding:10px 0 4px}
+.sch{position:relative}.sch .ic{position:absolute;left:14px;top:50%;margin-top:-10px;color:var(--t2)}.sch .inp{padding-left:42px}
+
+</style>
+</head>
+<body>
+<div id="app"></div>
+<noscript>UroVault needs JavaScript.</noscript>
+<script>
+'use strict';
+/* ===================== UroVault PWA - core: utils, icons, db, repo ===================== */
+const APP_VERSION = '1.0.0';
+
+const DX_OPTIONS = [
+  { name: 'Ureterocele', icon: 'ureterocele', paired: true, group: 'Renal' },
+  { name: 'Renal Mass', icon: 'renal', paired: true, group: 'Renal' },
+  { name: 'Prostate CA', icon: 'prostate', paired: false, group: 'Prostate' },
+  { name: 'Ca Bladder', icon: 'bladder', paired: false, group: 'Bladder' },
+  { name: 'Ureteric Stone', icon: 'stone', paired: true, group: 'Renal' },
+  { name: 'Renal Stone', icon: 'renal', paired: true, group: 'Renal' },
+  { name: 'Adrenal Mass', icon: 'adrenal', paired: true, group: 'Other' },
+  { name: 'PUJO', icon: 'pujo', paired: true, group: 'Renal' },
+  { name: 'Other', icon: '', paired: false, group: 'Other' }
+];
+const LATERALITY = ['Right', 'Left', 'Bilateral'];
+const INV_OPTIONS = ['RFT', 'CBC', 'Urine Analysis', 'Urine Culture', 'PSA', 'CT', 'MRI', 'DTPA', 'PET CT', 'Other'];
+const INV_ICON = { 'RFT': 'flask', 'CBC': 'drop', 'Urine Analysis': 'drop', 'Urine Culture': 'flask', 'PSA': 'drop', 'CT': 'scan', 'MRI': 'scan', 'DTPA': 'activity', 'PET CT': 'scan', 'Other': 'file' };
+const MEDIA_CATS = ['Clinical', 'Pre-op', 'Post-op', 'Follow-up', 'CT', 'MRI', 'Other'];
+const PROCEDURES = ['TURBT', 'TURP', 'PCNL', 'URS + DJ stenting', 'RIRS', 'Radical nephrectomy', 'Pyeloplasty', 'Radical prostatectomy', 'Cystoscopy'];
+const INTERVALS = ['1 week', '2 weeks', '1 month', '3 months', '6 months', '1 year'];
+const STATUSES = ['Improving', 'Stable', 'Worsening'];
+const FILTERS = ['All', 'Renal', 'Bladder', 'Prostate', 'Other'];
+const FU_FILTERS = ['Due Today', 'Upcoming', 'Overdue', 'Completed'];
+
+const invCat = n => (n === 'CT' ? 'CT' : n === 'MRI' ? 'MRI' : 'Other');
+const dxGroup = n => (DX_OPTIONS.find(o => o.name === n) || { group: 'Other' }).group;
+function matchesGroup(dxNames, g) {
+  if (g === 'All') return true;
+  if (!dxNames.length) return g === 'Other';
+  return dxNames.some(n => dxGroup(n) === g);
+}
+
+/* ---------------- utils ---------------- */
+const $ = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => [...(r || document).querySelectorAll(s)];
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const today = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); };
+const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const parseIso = s => { const [y, m, d] = String(s).slice(0, 10).split('-').map(Number); return new Date(y, m - 1, d); };
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const fmt = s => { if (!s) return '-'; const d = parseIso(s); return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear(); };
+const fmtDT = s => { if (!s) return '-'; const d = new Date(s); let h = d.getHours(); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() + ', ' + h + ':' + String(d.getMinutes()).padStart(2, '0') + ' ' + ap; };
+const dayDiff = s => Math.round((parseIso(s) - today()) / 86400000);
+function relDays(s) {
+  const d = dayDiff(s);
+  if (d === 0) return 'Today';
+  if (d === 1) return 'Tomorrow';
+  if (d === -1) return '1 day overdue';
+  return d < 0 ? (-d) + ' days overdue' : 'In ' + d + ' days';
+}
+function nextDateFor(label, from) {
+  const y = from.getFullYear(), m = from.getMonth(), d = from.getDate();
+  switch (label) {
+    case '1 week': return new Date(y, m, d + 7);
+    case '2 weeks': return new Date(y, m, d + 14);
+    case '1 month': return new Date(y, m + 1, d);
+    case '3 months': return new Date(y, m + 3, d);
+    case '6 months': return new Date(y, m + 6, d);
+    case '1 year': return new Date(y + 1, m, d);
+  }
+  return null;
+}
+function greeting() { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; }
+const initials = n => { const p = String(n || '').trim().split(/\s+/).filter(Boolean); return !p.length ? '?' : p.length === 1 ? p[0][0].toUpperCase() : (p[0][0] + p[p.length - 1][0]).toUpperCase(); };
+const uhidKey = u => String(u || '').trim().toUpperCase().replace(/\s+/g, '');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const nn = v => { v = v == null ? '' : String(v).trim(); return v ? v : null; };
+const isImg = f => /^image\//.test(f.type || '') || /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(f.name || '');
+function csvCell(v) { v = String(v == null ? '' : v); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+
+/* ---------------- icons ---------------- */
+const P = {
+  home: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  plus: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+  plusc: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>',
+  cal: '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+  more: '<circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/><circle cx="5" cy="12" r="1.2"/>',
+  search: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  edit: '<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>',
+  trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>',
+  camera: '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
+  image: '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>',
+  clip: '<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>',
+  file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
+  check: '<polyline points="20 6 9 17 4 12"/>',
+  chev: '<polyline points="9 18 15 12 9 6"/>',
+  left: '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
+  right: '<line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>',
+  bell: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+  user: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  lock: '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+  upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+  share: '<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>',
+  activity: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+  bars: '<line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/>',
+  sliders: '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>',
+  help: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  clip2: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>',
+  flask: '<path d="M9 3h6M10 3v6L4.5 19a1.5 1.5 0 0 0 1.3 2.2h12.4a1.5 1.5 0 0 0 1.3-2.2L14 9V3"/><line x1="7" y1="15" x2="17" y2="15"/>',
+  drop: '<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>',
+  scan: '<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="4"/>',
+  scalpel: '<path d="M3 21l7-7"/><path d="M10 14l8.5-8.5a2.1 2.1 0 0 1 3 3L13 17z"/>',
+  list: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
+  alert: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
+  hash: '<line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/>',
+  eye: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+  eyeoff: '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>',
+  history: '<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>',
+  note: '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>',
+  zoomout: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/>',
+  printer: '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
+  refresh: '<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>'
+};
+const U = {
+  renal: '<path d="M30 6C20 2 8 10 8 24c0 11 6 18 14 18 6 0 7-5 5-9-2-4 1-8 5-9 4-1 5-7 3-11-1-2-3-4-5-6z"/><path d="M27 34c2 4 4 6 4 10"/>',
+  bladder: '<path d="M10 20c0 12 6 22 14 22s14-10 14-22c-5 3-9 4-14 4s-9-1-14-4z"/><path d="M14 8c0 6 2 10 5 12M34 8c0 6-2 10-5 12"/><circle cx="24" cy="30" r="2.5"/>',
+  prostate: '<path d="M8 14c0-6 8-8 16-4 8-4 16-2 16 4 0 12-8 22-16 26C16 36 8 26 8 14z"/><path d="M24 10v30"/>',
+  stone: '<path d="M12 6c0 8 6 10 6 18s8 8 8 16"/><circle cx="30" cy="14" r="4.5"/><circle cx="36" cy="30" r="3"/><circle cx="14" cy="36" r="3"/>',
+  adrenal: '<path d="M32 18c-6-3-18 0-20 12-1 8 4 14 12 14 7 0 10-6 8-10-1-3 0-5 2-7 1-3 0-7-2-9z"/><path d="M8 14c3-6 9-10 15-9 3 1 2 5-1 8-4 3-9 4-14 1z"/>',
+  pujo: '<path d="M14 6C8 6 4 12 4 20c0 8 4 12 9 12 4 0 5-3 3-6-2-3 0-6 2-7 3-2 3-6 1-9-1-2-3-4-5-4z"/><path d="M34 6c6 0 10 6 10 14 0 8-4 12-9 12-4 0-5-3-3-6 2-3 0-6-2-7-3-2-3-6-1-9 1-2 3-4 5-4z"/><path d="M14 32v10M34 32v10"/>',
+  ureterocele: '<path d="M24 4v18"/><path d="M24 22c-7 0-11 5-11 11s5 10 11 10 11-4 11-10-4-11-11-11z"/><path d="M24 30v6"/>'
+};
+const ic = (n, s) => '<svg class="ic" width="' + (s || 20) + '" height="' + (s || 20) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (P[n] || '') + '</svg>';
+const uic = (n, s) => '<svg class="ic" width="' + (s || 26) + '" height="' + (s || 26) + '" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">' + (U[n] || '') + '</svg>';
+const dxIc = (name, s) => { const o = DX_OPTIONS.find(x => x.name === name); return o && o.icon ? uic(o.icon, s) : ic('more', s || 24); };
+const LOGO = (light, s) => '<svg width="' + s + '" height="' + s + '" viewBox="0 0 120 120" fill="none"><g stroke="' + (light ? '#fff' : '#0F2942') + '" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M46 16C32 8 12 18 12 42c0 16 8 28 20 28 9 0 11-8 8-14-3-6 1-12 7-14 6-2 8-10 4-16-1-2-3-4-5-6z"/><path d="M74 16c14-8 34 2 34 26 0 16-8 28-20 28-9 0-11-8-8-14 3-6-1-12-7-14-6-2-8-10-4-16 1-2 3-4 5-6z"/><path d="M46 64c2 12 8 18 14 24 6-6 12-12 14-24"/><path d="M60 88v8"/><circle cx="60" cy="103" r="7"/></g><g stroke="#0D9488" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M25 30l10 10-10 10"/><path d="M95 30L85 40l10 10"/></g></svg>';
+
+/* ---------------- IndexedDB ---------------- */
+const STORES = ['patients', 'investigations', 'surgeries', 'followups', 'notes', 'media', 'blobs', 'audit', 'meta'];
+let _db = null;
+function dbOpen() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('urovault', 1);
+    r.onupgradeneeded = () => {
+      const d = r.result;
+      const p = d.createObjectStore('patients', { keyPath: 'id', autoIncrement: true });
+      p.createIndex('uhidKey', 'uhidKey', { unique: true });
+      ['investigations', 'surgeries', 'followups', 'notes', 'media'].forEach(n => d.createObjectStore(n, { keyPath: 'id', autoIncrement: true }).createIndex('patientId', 'patientId'));
+      d.createObjectStore('blobs', { keyPath: 'id' });
+      d.createObjectStore('audit', { keyPath: 'id', autoIncrement: true });
+      d.createObjectStore('meta', { keyPath: 'key' });
+    };
+    r.onsuccess = () => { _db = r.result; res(_db); };
+    r.onerror = () => rej(r.error);
+  });
+}
+const rq = q => new Promise((res, rej) => { q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
+const store = (n, m) => _db.transaction(n, m || 'readonly').objectStore(n);
+const dbAll = n => rq(store(n).getAll());
+const dbGet = (n, id) => rq(store(n).get(id));
+const dbPut = (n, o) => rq(store(n, 'readwrite').put(o));
+const dbDel = (n, id) => rq(store(n, 'readwrite').delete(id));
+const dbBy = (n, pid) => rq(store(n).index('patientId').getAll(pid));
+const dbClear = n => rq(store(n, 'readwrite').clear());
+const metaGet = async k => { const r = await dbGet('meta', k); return r ? r.value : null; };
+const metaSet = (k, v) => dbPut('meta', { key: k, value: v });
+
+/* ---------------- images ---------------- */
+function loadImage(file) {
+  return new Promise((res, rej) => {
+    const u = URL.createObjectURL(file), i = new Image();
+    i.onload = () => res({ i, u });
+    i.onerror = () => { URL.revokeObjectURL(u); rej(new Error('Could not read this image')); };
+    i.src = u;
+  });
+}
+function drawJpeg(img, maxDim, q) {
+  const s = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(img.naturalWidth * s));
+  c.height = Math.max(1, Math.round(img.naturalHeight * s));
+  const x = c.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+  x.drawImage(img, 0, 0, c.width, c.height);
+  return c;
+}
+const canvasBlob = (c, q) => new Promise(r => c.toBlob(r, 'image/jpeg', q));
+/** Resize to <=2000px JPEG (saves storage) + 320px thumbnail data-URL. */
+async function processImage(file) {
+  const { i, u } = await loadImage(file);
+  try {
+    const big = drawJpeg(i, 2000);
+    const blob = await canvasBlob(big, 0.85);
+    const thumb = drawJpeg(i, 320).toDataURL('image/jpeg', 0.7);
+    return { blob, thumb };
+  } finally { URL.revokeObjectURL(u); }
+}
+const _urls = new Map();
+async function blobUrl(id) {
+  if (_urls.has(id)) return _urls.get(id);
+  const b = await dbGet('blobs', id);
+  if (!b) return '';
+  const u = URL.createObjectURL(b.blob);
+  _urls.set(id, u);
+  return u;
+}
+function freeUrl(id) { if (_urls.has(id)) { URL.revokeObjectURL(_urls.get(id)); _urls.delete(id); } }
+function blobToB64(blob) {
+  return new Promise((res, rej) => { const f = new FileReader(); f.onload = () => res(String(f.result).split(',')[1] || ''); f.onerror = () => rej(f.error); f.readAsDataURL(blob); });
+}
+function b64ToBlob(b64, type) {
+  const bin = atob(b64), len = bin.length, arr = new Uint8Array(len);
+  for (let i = 0; i < len; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: type || 'application/octet-stream' });
+}
+
+/* ---------------- repository ---------------- */
+const Repo = {
+  async audit(action, entity, entityId, patientId) {
+    try { await dbPut('audit', { ts: new Date().toISOString(), action, entity, entityId: entityId || null, patientId: patientId || null }); } catch (e) { /* never block a save on logging */ }
+  },
+  /* ---- patients ---- */
+  patients: () => dbAll('patients'),
+  patient: id => dbGet('patients', id),
+  async uhidTaken(uhid, exceptId) {
+    const k = uhidKey(uhid);
+    if (!k) return null;
+    const p = await rq(store('patients').index('uhidKey').get(k));
+    return p && p.id !== exceptId ? p : null;
+  },
+  async savePatient(p) {
+    const now = new Date().toISOString();
+    const rec = Object.assign({}, p, { uhid: p.uhid.trim(), uhidKey: uhidKey(p.uhid), name: p.name.trim(), updatedAt: now });
+    if (!rec.id) { rec.createdAt = now; rec.dx = rec.dx || []; delete rec.id; }
+    const id = await dbPut('patients', rec);
+    await Repo.audit(p.id ? 'update' : 'create', 'patient', id, id);
+    return id;
+  },
+  async touch(pid) { const p = await dbGet('patients', pid); if (p) { p.updatedAt = new Date().toISOString(); await dbPut('patients', p); } },
+  async setDx(pid, dx, addDx) {
+    const p = await dbGet('patients', pid);
+    p.dx = dx; p.addDx = nn(addDx); p.updatedAt = new Date().toISOString();
+    await dbPut('patients', p);
+    await Repo.audit('update', 'diagnosis', null, pid);
+  },
+  async deletePatient(id) {
+    for (const n of ['investigations', 'surgeries', 'followups', 'notes']) for (const r of await dbBy(n, id)) await dbDel(n, r.id);
+    for (const m of await dbBy('media', id)) { freeUrl(m.id); await dbDel('blobs', m.id); await dbDel('media', m.id); }
+    await dbDel('patients', id);
+    await Repo.audit('delete', 'patient', id);
+  },
+  /* ---- investigations ---- */
+  async invs(pid) { return (await dbBy('investigations', pid)).sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id); },
+  async addInv(pid, name, date, notes) {
+    const id = await dbPut('investigations', { patientId: pid, name, date, notes: nn(notes), createdAt: new Date().toISOString() });
+    await Repo.touch(pid); await Repo.audit('create', 'investigation', id, pid); return id;
+  },
+  async updInv(id, date, notes) {
+    const r = await dbGet('investigations', id); r.date = date; r.notes = nn(notes);
+    await dbPut('investigations', r); await Repo.audit('update', 'investigation', id, r.patientId);
+  },
+  async delInv(id) { await Repo.delRefMedia('investigation', id); await dbDel('investigations', id); await Repo.audit('delete', 'investigation', id); },
+  /* ---- media ---- */
+  async media(pid) { return (await dbBy('media', pid)).sort((a, b) => b.takenAt.localeCompare(a.takenAt) || b.id - a.id); },
+  async addMedia(o) {
+    const f = o.file;
+    let blob = f, thumb = null, kind = 'file';
+    if (isImg(f)) { const r = await processImage(f); blob = r.blob; thumb = r.thumb; kind = 'image'; }
+    const id = await dbPut('media', {
+      patientId: o.pid, kind, category: o.category || 'Other', caption: nn(o.caption), takenAt: o.takenAt || iso(today()),
+      refType: o.refType || null, refId: o.refId || null, name: f.name || 'file', mime: blob.type || f.type || '', thumb, createdAt: new Date().toISOString()
+    });
+    await dbPut('blobs', { id, blob });
+    await Repo.touch(o.pid); await Repo.audit('create', 'media', id, o.pid);
+    return id;
+  },
+  async updMedia(id, category, caption) { const m = await dbGet('media', id); m.category = category; m.caption = nn(caption); await dbPut('media', m); await Repo.audit('update', 'media', id, m.patientId); },
+  async delMedia(m) { freeUrl(m.id); await dbDel('blobs', m.id); await dbDel('media', m.id); await Repo.audit('delete', 'media', m.id, m.patientId); },
+  async delRefMedia(refType, refId) {
+    for (const m of await dbAll('media')) if (m.refType === refType && m.refId === refId) { freeUrl(m.id); await dbDel('blobs', m.id); await dbDel('media', m.id); }
+  },
+  /* ---- surgeries ---- */
+  async surgeries(pid) { return (await dbBy('surgeries', pid)).sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id); },
+  async allSurgeries() {
+    const ps = new Map((await dbAll('patients')).map(p => [p.id, p]));
+    return (await dbAll('surgeries')).filter(s => ps.has(s.patientId)).map(s => Object.assign({}, s, { pname: ps.get(s.patientId).name, uhid: ps.get(s.patientId).uhid })).sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+  },
+  async saveSurgery(s) {
+    const rec = Object.assign({}, s);
+    ['indication', 'notes', 'findings', 'hpe', 'postop'].forEach(k => { rec[k] = nn(rec[k]); });
+    rec.procedure = rec.procedure.trim();
+    if (!rec.id) { rec.createdAt = new Date().toISOString(); delete rec.id; }
+    const id = await dbPut('surgeries', rec);
+    await Repo.touch(rec.patientId); await Repo.audit(s.id ? 'update' : 'create', 'surgery', id, rec.patientId);
+    return id;
+  },
+  async delSurgery(id) { await Repo.delRefMedia('surgery', id); await dbDel('surgeries', id); await Repo.audit('delete', 'surgery', id); },
+  /* ---- follow-ups ---- */
+  async fus(pid) { return (await dbBy('followups', pid)).sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id); },
+  async allFus() {
+    const ps = new Map((await dbAll('patients')).map(p => [p.id, p]));
+    return (await dbAll('followups')).filter(f => ps.has(f.patientId)).map(f => { const p = ps.get(f.patientId); return Object.assign({}, f, { pname: p.name, uhid: p.uhid, dx: p.dx && p.dx[0] ? p.dx[0].name : null }); });
+  },
+  fuClass(f) {
+    if (f.completed) return 'Completed';
+    const d = dayDiff(f.date);
+    return d === 0 ? 'Due Today' : d > 0 ? 'Upcoming' : 'Overdue';
+  },
+  async fuList(filter) {
+    const all = (await Repo.allFus()).filter(f => Repo.fuClass(f) === filter);
+    return all.sort((a, b) => filter === 'Completed' ? b.date.localeCompare(a.date) || b.id - a.id : a.date.localeCompare(b.date));
+  },
+  async fuCounts() { const c = { 'Due Today': 0, 'Upcoming': 0, 'Overdue': 0, 'Completed': 0 }; (await Repo.allFus()).forEach(f => { c[Repo.fuClass(f)]++; }); return c; },
+  async pending(limit) { const l = (await Repo.allFus()).filter(f => !f.completed).sort((a, b) => a.date.localeCompare(b.date)); return limit ? l.slice(0, limit) : l; },
+  /** Records a visit. One active "next follow-up" per patient: a new visit replaces any pending one. */
+  async saveVisit(o) {
+    let editingCompleted = false, id = o.existingId;
+    if (id) { const ex = await dbGet('followups', id); editingCompleted = !!(ex && ex.completed); }
+    const base = { patientId: o.pid, date: o.date, notes: nn(o.notes), status: o.status || null, completed: true, nextDate: o.nextDate || null };
+    if (id) { const ex = await dbGet('followups', id); id = await dbPut('followups', Object.assign({}, ex, base)); }
+    else id = await dbPut('followups', Object.assign({ createdAt: new Date().toISOString() }, base));
+    if (!editingCompleted) {
+      for (const f of await dbBy('followups', o.pid)) if (!f.completed && f.id !== id) await dbDel('followups', f.id);
+      if (o.nextDate) await dbPut('followups', { patientId: o.pid, date: o.nextDate, notes: null, status: null, completed: false, nextDate: null, createdAt: new Date().toISOString() });
+    }
+    await Repo.touch(o.pid); await Repo.audit(o.existingId ? 'update' : 'create', 'followup', id, o.pid);
+    return id;
+  },
+  async schedule(pid, date) {
+    for (const f of await dbBy('followups', pid)) if (!f.completed) await dbDel('followups', f.id);
+    const id = await dbPut('followups', { patientId: pid, date, notes: null, status: null, completed: false, nextDate: null, createdAt: new Date().toISOString() });
+    await Repo.audit('create', 'followup', id, pid);
+  },
+  async delFu(id) { await Repo.delRefMedia('followup', id); await dbDel('followups', id); await Repo.audit('delete', 'followup', id); },
+  /* ---- notes ---- */
+  async notes(pid) { return (await dbBy('notes', pid)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)); },
+  async addNote(pid, text) { const id = await dbPut('notes', { patientId: pid, note: text.trim(), createdAt: new Date().toISOString() }); await Repo.touch(pid); await Repo.audit('create', 'note', id, pid); },
+  async delNote(id) { await dbDel('notes', id); await Repo.audit('delete', 'note', id); },
+  /* ---- timeline ---- */
+  async timeline(pid) {
+    const p = await dbGet('patients', pid); if (!p) return [];
+    const ev = [{ date: (p.createdAt || iso(today())).slice(0, 10), title: 'Initial visit', sub: p.cc || '', type: 'visit', tab: 'overview' }];
+    (await Repo.invs(pid)).forEach(i => ev.push({ date: i.date, title: i.name, sub: i.notes || 'Investigation', type: 'inv', tab: 'inv' }));
+    (await Repo.surgeries(pid)).forEach(s => ev.push({ date: s.date, title: 'Surgery - ' + s.procedure, sub: s.indication || '', type: 'surgery', tab: 'surgery' }));
+    (await Repo.fus(pid)).forEach(f => ev.push(f.completed ? { date: f.date, title: 'Follow-up', sub: f.notes || f.status || '', type: 'fu', tab: 'fu' } : { date: f.date, title: 'Follow-up scheduled', sub: relDays(f.date), type: 'sched', tab: 'fu' }));
+    return ev.sort((a, b) => a.date.localeCompare(b.date));
+  },
+  /* ---- stats ---- */
+  async counts() {
+    const [p, s, i, m, f] = await Promise.all([dbAll('patients'), dbAll('surgeries'), dbAll('investigations'), dbAll('media'), dbAll('followups')]);
+    const t = iso(today());
+    return { patients: p.length, surgeries: s.length, investigations: i.length, media: m.length, seen: f.filter(x => x.completed).length, due: f.filter(x => !x.completed && x.date <= t).length };
+  },
+  async dxStats() {
+    const m = {};
+    (await dbAll('patients')).forEach(p => (p.dx || []).forEach(d => { m[d.name] = (m[d.name] || 0) + 1; }));
+    return Object.entries(m).sort((a, b) => b[1] - a[1]);
+  },
+  async auditLog() { return (await dbAll('audit')).sort((a, b) => b.id - a.id).slice(0, 200); },
+  /* ---- demo ---- */
+  async hasDemo() { return (await dbAll('patients')).some(p => p.isDemo); },
+  async loadDemo() {
+    if (await Repo.hasDemo()) return;
+    const d = n => iso(new Date(today().getFullYear(), today().getMonth(), today().getDate() + n));
+    const mk = async (uhid, name, age, sex, cc, dx) => Repo.savePatient({ uhid, name, age, sex, cc, mobile: null, addDx: null, isDemo: true, dx });
+    const a = await mk('DEMO/2026/001', 'Demo Patient A', 58, 'Male', 'Hematuria for 2 weeks', [{ name: 'Ca Bladder' }]);
+    await Repo.addInv(a, 'RFT', d(-20)); await Repo.addInv(a, 'CBC', d(-20)); await Repo.addInv(a, 'CT', d(-19), 'Sample entry');
+    await Repo.saveSurgery({ patientId: a, procedure: 'TURBT', date: d(-14), indication: 'Ca bladder - diagnostic and therapeutic', notes: 'Sample operative note.', hpe: 'Sample HPE entry' });
+    await Repo.saveVisit({ pid: a, date: d(-3), notes: 'Sample follow-up note.', status: 'Stable', nextDate: d(0) });
+    const b = await mk('DEMO/2026/002', 'Demo Patient B', 46, 'Male', 'Right flank pain for 1 month', [{ name: 'Renal Stone', lat: 'Right' }]);
+    await Repo.addInv(b, 'Urine Analysis', d(-5)); await Repo.schedule(b, d(6));
+    const c = await mk('DEMO/2026/003', 'Demo Patient C', 62, 'Male', 'Poor stream, nocturia', [{ name: 'Prostate CA' }]);
+    await Repo.addInv(c, 'PSA', d(-8)); await Repo.schedule(c, d(-4));
+    const e = await mk('DEMO/2026/004', 'Demo Patient D', 34, 'Female', 'Left loin pain', [{ name: 'PUJO', lat: 'Left' }]);
+    await Repo.addInv(e, 'DTPA', d(-2)); await Repo.schedule(e, d(21));
+  },
+  async clearDemo() { for (const p of await dbAll('patients')) if (p.isDemo) await Repo.deletePatient(p.id); },
+  /* ---- backup (JSON, images as base64) ---- */
+  async buildBackup(onProgress) {
+    const parts = ['{"app":"UroVault","version":1,"exportedAt":' + JSON.stringify(new Date().toISOString()) + ','];
+    for (const n of ['patients', 'investigations', 'surgeries', 'followups', 'notes', 'media', 'audit']) parts.push(JSON.stringify(n) + ':' + JSON.stringify(await dbAll(n)) + ',');
+    parts.push('"blobs":[');
+    const blobs = await dbAll('blobs');
+    let first = true, k = 0;
+    for (const b of blobs) {
+      parts.push((first ? '' : ',') + JSON.stringify({ id: b.id, type: b.blob.type, data: await blobToB64(b.blob) }));
+      first = false; k++;
+      if (onProgress) onProgress(k, blobs.length);
+    }
+    parts.push(']}');
+    return new Blob(parts, { type: 'application/json' });
+  },
+  async restoreBackup(text) {
+    const j = JSON.parse(text);
+    if (j.app !== 'UroVault' || !j.patients) throw new Error('This file is not a UroVault backup');
+    for (const n of ['patients', 'investigations', 'surgeries', 'followups', 'notes', 'media', 'blobs', 'audit']) await dbClear(n);
+    _urls.forEach(u => URL.revokeObjectURL(u)); _urls.clear();
+    for (const n of ['patients', 'investigations', 'surgeries', 'followups', 'notes', 'media', 'audit']) for (const r of (j[n] || [])) await dbPut(n, r);
+    for (const b of (j.blobs || [])) await dbPut('blobs', { id: b.id, blob: b64ToBlob(b.data, b.type) });
+    await Repo.audit('restore', 'backup');
+  },
+  async eraseAll() { for (const n of STORES) await dbClear(n); _urls.clear(); }
+};
+
+/* ---------------- auth (local account, PBKDF2) ---------------- */
+const enc = new TextEncoder();
+const bytesToB64 = a => btoa(String.fromCharCode(...a));
+const b64ToBytes = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function pbk(pw, salt) {
+  const key = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 150000, hash: 'SHA-256' }, key, 256));
+}
+const Auth = {
+  has: async () => !!(await metaGet('acct')),
+  async create(name, id, pw) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    await metaSet('acct', { name: name.trim(), id: id.trim().toLowerCase(), salt: bytesToB64(salt), hash: bytesToB64(await pbk(pw, salt)) });
+  },
+  async verify(id, pw) {
+    const a = await metaGet('acct'); if (!a || a.id !== id.trim().toLowerCase()) return false;
+    return bytesToB64(await pbk(pw, b64ToBytes(a.salt))) === a.hash;
+  },
+  async setPassword(pw) { const a = await metaGet('acct'); const salt = crypto.getRandomValues(new Uint8Array(16)); a.salt = bytesToB64(salt); a.hash = bytesToB64(await pbk(pw, salt)); await metaSet('acct', a); },
+  acct: () => metaGet('acct'),
+  async setName(n) { const a = await metaGet('acct'); a.name = n.trim(); await metaSet('acct', a); }
+};
+
+/* ===================== UroVault PWA - ui infrastructure ===================== */
+const app = $('#app');
+const SESSION = { unlocked: false, hiddenAt: 0 };
+const Views = {};
+const ACT = {};
+let STACK = [];
+let CUR_TAB = 'home';
+let _renderSeq = 0;
+
+const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const IS_STANDALONE = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+
+function hdr(title, o) {
+  o = o || {};
+  return '<header class="hdr"><div class="in">' +
+    (o.back === false ? '<div class="sp"></div>' : '<button class="ib" data-act="back" aria-label="Back">' + ic('left', 22) + '</button>') +
+    '<h1>' + esc(title) + '</h1>' + (o.right || '<div class="sp"></div>') + '</div></header>';
+}
+function navbar(active) {
+  const b = (k, i, l) => '<button class="' + (active === k ? 'on' : '') + '" data-act="tab" data-v="' + k + '">' + ic(i, 22) + '<span>' + l + '</span></button>';
+  return '<nav class="nav"><div class="in">' + b('home', 'home', 'Home') + b('patients', 'users', 'Patients') +
+    '<div class="plus"><button data-act="newPatient" aria-label="New patient">' + ic('plus', 26) + '</button></div>' +
+    b('followups', 'cal', 'Follow-ups') + b('more', 'more', 'More') + '</div></nav>';
+}
+const wrapPage = (html, bar) => '<div class="wrap page' + (bar ? '' : ' nobar') + '">' + html + '</div>';
+const emptyBox = (icon, title, text, btn) => '<div class="empty"><div class="ring">' + ic(icon, 34) + '</div><h3>' + esc(title) + '</h3><p>' + esc(text) + '</p>' + (btn || '') + '</div>';
+
+async function render(keepScroll) {
+  const seq = ++_renderSeq;
+  const top = STACK[STACK.length - 1];
+  if (!top) return;
+  let r;
+  try { r = await Views[top.view](top.params || {}); }
+  catch (e) {
+    console.error(e);
+    r = { html: hdr('Error', { back: STACK.length > 1 }) + wrapPage('<div class="card"><b>Something went wrong.</b><div class="small" style="margin-top:6px">' + esc(e && e.message) + '</div></div>') };
+  }
+  if (seq !== _renderSeq) return;
+  app.innerHTML = r.html;
+  app.onclick = ev => {
+    const el = ev.target.closest('[data-act]');
+    if (!el || !app.contains(el)) return;
+    const h = (r.acts && r.acts[el.dataset.act]) || ACT[el.dataset.act];
+    if (h) h(el, ev);
+  };
+  if (r.bind) r.bind(app);
+  window.scrollTo(0, keepScroll ? (top.scroll || 0) : 0);
+}
+function go(view, params) {
+  const t = STACK[STACK.length - 1]; if (t) t.scroll = window.scrollY;
+  STACK.push({ view, params });
+  try { history.pushState({ d: STACK.length }, ''); } catch (e) { /* ignore */ }
+  render();
+}
+function replace(view, params) { STACK[STACK.length - 1] = { view, params }; render(); }
+function back() { if (STACK.length > 1) history.back(); }
+function setTab(t) { CUR_TAB = t; STACK = [{ view: t }]; render(); }
+window.addEventListener('popstate', () => { if (STACK.length > 1) { STACK.pop(); render(true); } });
+ACT.back = () => back();
+ACT.tab = el => setTab(el.dataset.v);
+ACT.newPatient = () => go('addPatient', {});
+
+/* ---------- overlays ---------- */
+function sheet(html, bind) {
+  const s = document.createElement('div');
+  s.className = 'scrim';
+  s.innerHTML = '<div class="sheet"><div class="grab"></div>' + html + '</div>';
+  s.addEventListener('click', e => { if (e.target === s) s.remove(); });
+  document.body.appendChild(s);
+  const close = () => s.remove();
+  if (bind) bind(s.firstChild, close);
+  return { el: s, close };
+}
+function confirmDlg(title, msg, okLabel, danger) {
+  return new Promise(res => {
+    const s = document.createElement('div');
+    s.className = 'scrim mid';
+    s.innerHTML = '<div class="modal"><h3>' + esc(title) + '</h3><p>' + esc(msg) + '</p><div class="row"><button class="btn o" data-r="0">Cancel</button><button class="btn ' + (danger ? 'red' : '') + '" data-r="1">' + esc(okLabel || 'OK') + '</button></div></div>';
+    s.addEventListener('click', e => { const b = e.target.closest('[data-r]'); if (b || e.target === s) { s.remove(); res(!!b && b.dataset.r === '1'); } });
+    document.body.appendChild(s);
+  });
+}
+function alertDlg(title, msg) {
+  return new Promise(res => {
+    const s = document.createElement('div');
+    s.className = 'scrim mid';
+    s.innerHTML = '<div class="modal"><h3>' + esc(title) + '</h3><p>' + esc(msg) + '</p><button class="btn" data-r="1" style="height:44px">OK</button></div>';
+    s.addEventListener('click', e => { if (e.target.closest('[data-r]') || e.target === s) { s.remove(); res(); } });
+    document.body.appendChild(s);
+  });
+}
+let _toastT = null;
+function toast(msg) {
+  $$('.toast').forEach(t => t.remove());
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  clearTimeout(_toastT); _toastT = setTimeout(() => t.remove(), 2600);
+}
+function busy(msg) {
+  const b = document.createElement('div'); b.className = 'busy';
+  b.innerHTML = '<div class="spin"></div><div class="msg">' + esc(msg || 'Working...') + '</div>';
+  document.body.appendChild(b);
+  return { set: m => { $('.msg', b).textContent = m; }, done: () => b.remove() };
+}
+async function withBusy(msg, fn) {
+  const b = busy(msg);
+  try { return await fn(b); } finally { b.done(); }
+}
+
+/* ---------- files ---------- */
+function pickFiles(o) {
+  return new Promise(res => {
+    const i = document.createElement('input');
+    i.type = 'file'; i.style.display = 'none';
+    if (o.accept) i.accept = o.accept;
+    if (o.multiple) i.multiple = true;
+    if (o.capture) i.setAttribute('capture', o.capture);
+    document.body.appendChild(i);
+    i.onchange = () => { res([...i.files]); setTimeout(() => i.remove(), 1500); };
+    i.click();
+  });
+}
+function downloadBlob(blob, name) {
+  const u = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = u; a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { a.remove(); URL.revokeObjectURL(u); }, 4000);
+}
+/** Must be called straight from a tap (fresh user gesture) so iOS allows the share sheet. */
+async function shareOrSave(blob, name) {
+  const file = new File([blob], name, { type: blob.type || 'application/octet-stream' });
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: name }); return 'shared'; }
+  } catch (e) { if (e && e.name === 'AbortError') return 'cancelled'; }
+  downloadBlob(blob, name);
+  return 'downloaded';
+}
+
+/* ---------- attachment picker block ---------- */
+function attachHtml(id, title) {
+  return '<div id="' + id + '"><div class="lbl">' + esc(title || 'Attachments') + '</div><div class="row">' +
+    '<button type="button" class="btn o sm" data-pk="cam">' + ic('camera', 16) + ' Camera</button>' +
+    '<button type="button" class="btn o sm" data-pk="lib">' + ic('image', 16) + ' Photos</button>' +
+    '<button type="button" class="btn o sm" data-pk="file">' + ic('clip', 16) + ' File</button></div><div class="thumbs"></div></div>';
+}
+function bindAttach(root) {
+  const st = { files: [] };
+  const th = $('.thumbs', root);
+  const draw = () => {
+    th.innerHTML = st.files.map((f, i) => '<div class="th ' + (f.img ? '' : 'file') + '">' + (f.img ? '<img alt="" src="' + f.url + '">' : ic('file', 22)) + '<button type="button" class="x" data-rm="' + i + '">' + ic('x', 12) + '</button></div>').join('');
+  };
+  root.addEventListener('click', async e => {
+    const rm = e.target.closest('[data-rm]');
+    if (rm) { const f = st.files.splice(+rm.dataset.rm, 1)[0]; if (f.url) URL.revokeObjectURL(f.url); draw(); return; }
+    const b = e.target.closest('[data-pk]'); if (!b) return;
+    const k = b.dataset.pk;
+    const fs = await pickFiles(k === 'cam' ? { accept: 'image/*', capture: 'environment' } : k === 'lib' ? { accept: 'image/*', multiple: true } : { accept: 'image/*,application/pdf,.pdf,.doc,.docx,.txt', multiple: true });
+    fs.forEach(f => { const img = isImg(f); st.files.push({ file: f, img, url: img ? URL.createObjectURL(f) : '' }); });
+    draw();
+  });
+  st.clear = () => { st.files.forEach(f => f.url && URL.revokeObjectURL(f.url)); st.files = []; draw(); };
+  return st;
+}
+async function saveStaged(st, o) {
+  let n = 0;
+  for (const f of st.files) {
+    await Repo.addMedia({ pid: o.pid, file: f.file, category: o.category, caption: o.caption, takenAt: o.takenAt, refType: o.refType, refId: o.refId });
+    n++;
+  }
+  return n;
+}
+
+/* ---------- media thumbnails with existing attachments ---------- */
+function thumbsHtml(list, attr) {
+  return list.map((m, i) => '<div class="th ' + (m.kind === 'image' ? '' : 'file') + '" ' + (attr || '') + ' data-mi="' + i + '">' +
+    (m.kind === 'image' && m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '</div>').join('');
+}
+
+/* ---------- viewer (zoom / pan / swipe) ---------- */
+function openViewer(list, idx, done) {
+  list = list.slice();
+  let i = Math.min(idx, list.length - 1), sc = 1, tx = 0, ty = 0, changed = false;
+  const v = document.createElement('div'); v.className = 'viewer';
+  document.body.appendChild(v);
+  const close = () => { v.remove(); if (changed && done) done(); };
+  const apply = () => { const im = $('img', v); if (im) im.style.transform = 'translate(-50%,-50%) translate(' + tx + 'px,' + ty + 'px) scale(' + sc + ')'; };
+  async function show() {
+    const m = list[i]; sc = 1; tx = 0; ty = 0;
+    const url = await blobUrl(m.id);
+    v.innerHTML = '<div class="vt"><button class="ib" data-v="close" aria-label="Close">' + ic('x', 22) + '</button><div class="cnt">' + (i + 1) + ' / ' + list.length + '</div>' +
+      '<button class="ib" data-v="edit" aria-label="Edit">' + ic('edit', 20) + '</button><button class="ib" data-v="share" aria-label="Share">' + ic('share', 20) + '</button><button class="ib" data-v="del" aria-label="Delete">' + ic('trash', 20) + '</button></div>' +
+      '<div class="stage">' + (m.kind === 'image' ? '<img alt="" src="' + url + '">' :
+        '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;gap:14px;padding:30px;text-align:center">' + ic('file', 56) + '<div style="font-weight:600;overflow-wrap:anywhere">' + esc(m.name) + '</div><button class="btn" style="width:auto;padding:0 28px" data-v="share">Open / Share</button></div>') +
+      (list.length > 1 ? '<button class="nav" style="left:0;border-radius:0 12px 12px 0" data-v="prev">' + ic('left', 22) + '</button><button class="nav" style="right:0;border-radius:12px 0 0 12px" data-v="next">' + ic('right', 22) + '</button>' : '') + '</div>' +
+      '<div class="vb"><b>' + esc(m.category) + '</b> &middot; ' + fmt(m.takenAt) + (m.caption ? '<div style="margin-top:4px;opacity:.9">' + esc(m.caption) + '</div>' : '') + '</div>';
+    apply(); bindStage();
+  }
+  function bindStage() {
+    const st = $('.stage', v); if (!st || !$('img', st)) return;
+    const ptrs = new Map(); let d0 = 0, s0 = 1, last = null, sx = 0, moved = 0, lastTap = 0;
+    st.onpointerdown = e => { st.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; d0 = Math.hypot(a.x - b.x, a.y - b.y); s0 = sc; } last = { x: e.clientX, y: e.clientY }; sx = e.clientX; moved = 0; };
+    st.onpointermove = e => {
+      if (!ptrs.has(e.pointerId)) return;
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; sc = Math.min(6, Math.max(1, s0 * Math.hypot(a.x - b.x, a.y - b.y) / d0)); if (sc === 1) { tx = 0; ty = 0; } apply(); }
+      else if (sc > 1 && last) { tx += e.clientX - last.x; ty += e.clientY - last.y; apply(); }
+      if (last) { moved += Math.abs(e.clientX - last.x) + Math.abs(e.clientY - last.y); last = { x: e.clientX, y: e.clientY }; }
+    };
+    st.onpointerup = st.onpointercancel = e => {
+      const wasOne = ptrs.size === 1; ptrs.delete(e.pointerId);
+      if (wasOne && sc === 1 && list.length > 1 && Math.abs(e.clientX - sx) > 70) { i = (i + (e.clientX < sx ? 1 : list.length - 1)) % list.length; show(); return; }
+      if (wasOne && moved < 8) { const now = Date.now(); if (now - lastTap < 300) { sc = sc > 1 ? 1 : 2.5; tx = 0; ty = 0; apply(); lastTap = 0; } else lastTap = now; }
+    };
+  }
+  v.addEventListener('click', async e => {
+    const b = e.target.closest('[data-v]'); if (!b) return;
+    const a = b.dataset.v, m = list[i];
+    if (a === 'close') close();
+    else if (a === 'prev') { i = (i + list.length - 1) % list.length; show(); }
+    else if (a === 'next') { i = (i + 1) % list.length; show(); }
+    else if (a === 'share') { const d = await dbGet('blobs', m.id); if (d) { const r = await shareOrSave(d.blob, m.name || 'file'); if (r === 'downloaded') toast('Saved to downloads'); } }
+    else if (a === 'del') {
+      if (await confirmDlg('Delete this item?', 'This cannot be undone.', 'Delete', true)) {
+        await Repo.delMedia(m); changed = true; list.splice(i, 1);
+        if (!list.length) { close(); return; }
+        i = Math.min(i, list.length - 1); show();
+      }
+    } else if (a === 'edit') {
+      sheet('<h3>Edit details</h3><div class="lbl">Category</div><div class="chips wrapchips" id="ecats">' + MEDIA_CATS.map(c => '<button class="chip sm ' + (c === m.category ? 'on' : '') + '" data-c="' + c + '">' + c + '</button>').join('') + '</div>' +
+        '<div class="lbl">Caption</div><input class="inp" id="ecap" value="' + esc(m.caption || '') + '" placeholder="Optional"><div style="height:16px"></div><button class="btn" id="esave">Save</button>', (s, cl) => {
+        let cat = m.category;
+        $('#ecats', s).onclick = ev => { const c = ev.target.closest('[data-c]'); if (!c) return; cat = c.dataset.c; $$('#ecats .chip', s).forEach(x => x.classList.toggle('on', x === c)); };
+        $('#esave', s).onclick = async () => { await Repo.updMedia(m.id, cat, $('#ecap', s).value); m.category = cat; m.caption = nn($('#ecap', s).value); changed = true; cl(); show(); };
+      });
+    }
+  });
+  show();
+}
+
+/* ---------- small shared view helpers ---------- */
+const dxLabel = (d, p) => (d.name === 'Other' && p && p.addDx ? p.addDx : d.name) + (d.lat ? ' (' + d.lat + ')' : '');
+function ptile(p) {
+  const dx = (p.dx || []).map(d => dxLabel(d, p));
+  return '<div class="card tap tile" data-act="open" data-id="' + p.id + '"><div class="avatar">' + esc(initials(p.name)) + '</div><div class="grow"><div class="t-name">' + esc(p.name) + (p.isDemo ? ' <span class="pill grey">Demo</span>' : '') + '</div>' +
+    '<div class="t-sub"><b>' + esc(p.uhid) + '</b> &middot; ' + p.age + 'y &middot; ' + esc(p.sex) + '</div>' +
+    (dx.length ? '<div style="margin-top:5px"><span class="pill">' + esc(dx[0]) + '</span>' + (dx.length > 1 ? ' <span class="pill grey">+' + (dx.length - 1) + '</span>' : '') + '</div>' : '') +
+    '</div>' + ic('chev', 18) + '</div>';
+}
+function fuTile(f) {
+  const cls = Repo.fuClass(f);
+  const pc = cls === 'Overdue' ? 'red' : cls === 'Due Today' ? 'amber' : cls === 'Completed' ? 'green' : '';
+  return '<div class="card tap tile" data-act="openfu" data-id="' + f.patientId + '"><div class="avatar">' + esc(initials(f.pname)) + '</div><div class="grow"><div class="t-name">' + esc(f.pname) + '</div>' +
+    '<div class="t-sub"><b>' + esc(f.uhid) + '</b>' + (f.dx ? ' &middot; ' + esc(f.dx) : '') + '</div></div>' +
+    '<div style="text-align:right"><div class="small"><b style="color:var(--navy)">' + fmt(f.date) + '</b></div><span class="pill ' + pc + '">' + esc(cls === 'Completed' ? (f.status || 'Visited') : relDays(f.date)) + '</span></div></div>';
+}
+ACT.open = el => go('profile', { id: +el.dataset.id });
+ACT.openfu = el => go('profile', { id: +el.dataset.id, tab: 'fu' });
+const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+function chipsHtml(items, sel, attr) { return items.map(c => '<button type="button" class="chip sm ' + (c === sel ? 'on' : '') + '" ' + attr + '="' + esc(c) + '">' + esc(c) + '</button>').join(''); }
+function refresh() { render(true); }
+
+/* ===================== views: auth, home, patients, registration, diagnosis ===================== */
+
+Views.splash = async () => ({
+  html: '<div class="splash"><div class="lg">' + LOGO(true, 110) + '</div><h1>UroVault</h1><p>Your Urology Practice, Organised.</p>' +
+    '<svg class="wave" viewBox="0 0 400 120" preserveAspectRatio="none"><path d="M0 60 C80 20 160 100 240 60 S360 30 400 55 L400 120 L0 120Z" fill="#0D9488" opacity=".25"/><path d="M0 80 C90 50 170 110 260 80 S360 60 400 78 L400 120 L0 120Z" fill="#0D9488" opacity=".35"/></svg></div>'
+});
+
+const iosTip = () => (IS_IOS && !IS_STANDALONE)
+  ? '<div class="ios">' + ic('share', 20) + '<div><b>Install on iPhone</b><br>Tap the Share button in Safari, then <b>Add to Home Screen</b> so UroVault opens like an app.</div></div>' : '';
+
+Views.onboarding = async () => ({
+  html: '<div class="auth"><div class="in"><div class="logo" style="margin-top:10px">' + LOGO(false, 84) + '</div><h1 style="margin-top:10px">UroVault</h1><div class="sub2">Your Urology Practice, Organised.</div>' +
+    '<div class="card feat"><div class="iconbox">' + ic('users', 22) + '</div><div><div class="t">Fast patient registration</div><div class="s">UHID-first, one-tap diagnosis</div></div></div>' +
+    '<div class="card feat"><div class="iconbox">' + ic('camera', 22) + '</div><div><div class="t">Images, reports &amp; surgeries</div><div class="s">Everything for a patient in one place</div></div></div>' +
+    '<div class="card feat"><div class="iconbox">' + ic('lock', 22) + '</div><div><div class="t">Private &amp; offline</div><div class="s">Data stays on this device</div></div></div>' +
+    '<div style="height:10px"></div><button class="btn" data-act="start">Get Started</button>' + iosTip() + '</div></div>',
+  acts: { start: () => replace('signup') }
+});
+
+Views.signup = async () => ({
+  html: '<div class="auth"><div class="in"><div class="logo">' + LOGO(false, 64) + '</div><h1 style="margin-top:8px">Create your account</h1><div class="sub2">Stored only on this device</div>' +
+    '<label class="lbl" style="margin-top:0">Full name <i>*</i></label><input class="inp" id="sn" placeholder="Dr. Full Name" autocomplete="name">' +
+    '<label class="lbl">Email or username <i>*</i></label><input class="inp" id="si" autocapitalize="none" autocomplete="username" placeholder="you@example.com">' +
+    '<label class="lbl">Password <i>*</i></label><div class="pwrap"><input class="inp" id="sp" type="password" autocomplete="new-password" placeholder="At least 6 characters"><button type="button" data-act="eye">' + ic('eye', 20) + '</button></div>' +
+    '<label class="lbl">Confirm password <i>*</i></label><input class="inp" id="sp2" type="password" autocomplete="new-password">' +
+    '<div class="ferr" id="serr"></div><div style="height:18px"></div><button class="btn" data-act="create">Create Account</button>' +
+    '<p class="small" style="text-align:center;margin-top:14px">There is no password recovery - your data lives only on this device. Keep regular backups.</p></div></div>',
+  acts: {
+    eye: el => { const i = $('#sp'); i.type = i.type === 'password' ? 'text' : 'password'; },
+    create: async () => {
+      const n = $('#sn').value.trim(), id = $('#si').value.trim(), pw = $('#sp').value, e = $('#serr');
+      if (!n || !id) return e.textContent = 'Name and email/username are required';
+      if (pw.length < 6) return e.textContent = 'Password must be at least 6 characters';
+      if (pw !== $('#sp2').value) return e.textContent = 'Passwords do not match';
+      await withBusy('Creating account...', async () => { await Auth.create(n, id, pw); await metaSet('lockOn', true); });
+      SESSION.unlocked = true; setTab('home');
+    }
+  }
+});
+
+Views.login = async () => {
+  const a = await Auth.acct();
+  return {
+    html: '<div class="auth"><div class="in"><div class="logo" style="margin-top:20px">' + LOGO(false, 84) + '</div><h1 style="margin-top:10px">Welcome back</h1><div class="sub2">' + esc(a.name) + '</div>' +
+      '<label class="lbl" style="margin-top:0">Email or username</label><input class="inp" id="li" autocapitalize="none" autocomplete="username" value="' + esc(a.id) + '">' +
+      '<label class="lbl">Password</label><div class="pwrap"><input class="inp" id="lp" type="password" autocomplete="current-password"><button type="button" data-act="eye">' + ic('eye', 20) + '</button></div>' +
+      '<div class="ferr" id="lerr"></div><div style="height:18px"></div><button class="btn" data-act="unlock">Unlock</button>' +
+      '<div style="text-align:center;margin-top:16px"><button class="linkbtn" data-act="forgot">Forgot password?</button></div></div></div>',
+    acts: {
+      eye: () => { const i = $('#lp'); i.type = i.type === 'password' ? 'text' : 'password'; },
+      unlock: async () => {
+        const pw = $('#lp').value;
+        const ok = await withBusy('Checking...', () => Auth.verify($('#li').value, pw));
+        if (!ok) { $('#lerr').textContent = 'Incorrect email/username or password'; return; }
+        SESSION.unlocked = true; setTab(CUR_TAB === 'login' ? 'home' : (CUR_TAB || 'home'));
+      },
+      forgot: async () => {
+        if (!await confirmDlg('Reset UroVault?', 'There is no way to recover a forgotten password. You can erase everything on this device and start fresh, then restore from a backup file.', 'Erase everything', true)) return;
+        await Repo.eraseAll(); toast('All data erased'); STACK = [{ view: 'onboarding' }]; render();
+      }
+    },
+    bind: () => { $('#lp').addEventListener('keydown', e => { if (e.key === 'Enter') $('[data-act=unlock]').click(); }); }
+  };
+};
+
+function lockNow() { if (!SESSION.unlocked) return; SESSION.unlocked = false; STACK = [{ view: 'login' }]; render(); }
+
+/* ---------------- home ---------------- */
+Views.home = async () => {
+  const [a, c, pend, ps, lastBk] = await Promise.all([Auth.acct(), Repo.counts(), Repo.pending(), Repo.patients(), metaGet('lastBackup')]);
+  const t = iso(today());
+  const due = pend.filter(f => f.date <= t).slice(0, 5);
+  const recent = ps.slice().sort((x, y) => (y.updatedAt || '').localeCompare(x.updatedAt || '')).slice(0, 5);
+  const first = a.name.replace(/^dr\.?\s*/i, '').split(' ')[0];
+  const bkDays = lastBk ? Math.round((Date.now() - new Date(lastBk)) / 86400000) : null;
+  const needBk = ps.length > 0 && (bkDays === null || bkDays >= 7);
+  const stat = (act, icn, n, l) => '<button class="stat" data-act="' + act + '">' + ic(icn, 20) + '<div class="n">' + n + '</div><div class="l">' + l + '</div></button>';
+  return {
+    html: '<div class="dhead"><div class="in"><div class="top"><div class="brand">UroVault</div>' +
+      '<button class="ib" data-act="searchP" aria-label="Search">' + ic('search', 22) + '</button>' +
+      '<button class="ib" data-act="tab" data-v="followups" aria-label="Follow-ups">' + ic('bell', 22) + (c.due ? '<span class="dot">' + c.due + '</span>' : '') + '</button></div>' +
+      '<div class="greet">' + greeting() + ',<br>Dr. ' + esc(first) + '</div>' +
+      '<div class="stats">' + stat('tab" data-v="patients', 'users', c.patients, 'Patients') + stat('tab" data-v="followups', 'bell', c.due, 'Follow-ups Due') + stat('allSurg', 'scalpel', c.surgeries, 'Surgeries') + '</div></div></div>' +
+      wrapPage(
+        (needBk ? '<div class="card tap" data-act="goBackup" style="background:var(--ambert);border-color:#FCD34D;display:flex;gap:12px;align-items:center;margin-top:16px">' + ic('alert', 22) + '<div style="flex:1"><b>Back up your data</b><div class="small" style="color:var(--amberd)">' + (bkDays === null ? 'No backup yet. Safari can clear website data.' : 'Last backup ' + bkDays + ' days ago.') + '</div></div>' + ic('chev', 18) + '</div>' : '') +
+        '<div class="sec" style="margin-top:20px"><h2>Quick Actions</h2></div><div class="qa">' +
+        '<button data-act="newPatient"><div class="iconbox">' + ic('plus', 22) + '</div>New Patient</button>' +
+        '<button data-act="tab" data-v="patients"><div class="iconbox">' + ic('users', 22) + '</div>Patients</button>' +
+        '<button data-act="tab" data-v="followups"><div class="iconbox">' + ic('cal', 22) + '</div>Follow-ups</button></div>' +
+        '<div class="sec"><h2>Follow-ups Due</h2><button data-act="tab" data-v="followups">View all</button></div>' +
+        (due.length ? due.map(fuTile).join('') : '<div class="card small" style="text-align:center;padding:22px">Nothing due. You are all caught up.</div>') +
+        '<div class="sec"><h2>Recent Patients</h2><button data-act="tab" data-v="patients">View all</button></div>' +
+        (recent.length ? recent.map(ptile).join('') : emptyBox('users', 'No patients yet', 'Register your first patient to get started.', '<button class="btn" data-act="newPatient">Register Patient</button>')), true) + navbar('home'),
+    acts: {
+      searchP: () => { PSTATE.focus = true; setTab('patients'); },
+      allSurg: () => go('allSurgeries'),
+      goBackup: () => go('backup')
+    }
+  };
+};
+
+/* ---------------- patients list ---------------- */
+const PSTATE = { q: '', f: 'All', focus: false };
+Views.patients = async () => {
+  const all = (await Repo.patients()).sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+  const list = () => {
+    const q = PSTATE.q.trim().toLowerCase();
+    return all.filter(p => matchesGroup((p.dx || []).map(d => d.name), PSTATE.f) &&
+      (!q || [p.name, p.uhid, p.mobile, p.cc, p.addDx, ...(p.dx || []).map(d => d.name)].some(x => x && String(x).toLowerCase().includes(q))));
+  };
+  const body = () => { const l = list(); return l.length ? l.map(ptile).join('') : (all.length ? emptyBox('search', 'No matches', 'Try a different search or filter.') : emptyBox('users', 'No patients yet', 'Tap + to register your first patient.')); };
+  return {
+    html: hdr('Patients', { back: false }) +
+      '<div class="wrap"><div class="sticky-search"><div class="sch">' + ic('search', 20) + '<input class="inp" id="q" type="search" placeholder="Search name, UHID, diagnosis" value="' + esc(PSTATE.q) + '"></div></div></div>' +
+      '<div class="chips" id="pf" style="max-width:640px;margin:0 auto">' + FILTERS.map(f => '<button class="chip ' + (PSTATE.f === f ? 'on' : '') + '" data-f="' + f + '">' + f + '</button>').join('') + '</div>' +
+      wrapPage('<div class="small" id="pcount" style="margin:2px 2px 8px">' + list().length + ' of ' + all.length + ' patients</div><div id="plist">' + body() + '</div>', true) + navbar('patients'),
+    bind: root => {
+      const upd = () => { $('#plist').innerHTML = body(); $('#pcount').textContent = list().length + ' of ' + all.length + ' patients'; };
+      $('#q').oninput = debounce(e => { PSTATE.q = e.target.value; upd(); }, 120);
+      $('#pf').onclick = e => { const b = e.target.closest('[data-f]'); if (!b) return; PSTATE.f = b.dataset.f; $$('#pf .chip').forEach(x => x.classList.toggle('on', x === b)); upd(); };
+      if (PSTATE.focus) { PSTATE.focus = false; $('#q').focus(); }
+    }
+  };
+};
+
+/* ---------------- add / edit patient ---------------- */
+Views.addPatient = async ({ id }) => {
+  const ex = id ? await Repo.patient(id) : null;
+  let draft = null;
+  if (!ex) { draft = await metaGet('draft'); if (draft && !(draft.uhid || draft.name || draft.cc)) draft = null; }
+  const v = ex || draft || {};
+  return {
+    html: hdr(ex ? 'Edit Patient' : 'New Patient') +
+      wrapPage((draft ? '<div class="banner">' + ic('history', 16) + ' Draft restored <button data-act="discard">Discard</button></div>' : '') +
+        '<label class="lbl" style="margin-top:6px">UHID <i>*</i></label><input class="inp uhid" id="uhid" autocapitalize="characters" autocomplete="off" placeholder="e.g. 2026/00123" value="' + esc(v.uhid || '') + '"><div id="dup"></div>' +
+        '<label class="lbl">Patient name <i>*</i></label><input class="inp" id="name" autocomplete="off" placeholder="Full name" value="' + esc(v.name || '') + '">' +
+        '<div class="two"><div><label class="lbl">Age <i>*</i></label><input class="inp" id="age" type="number" inputmode="numeric" min="0" max="120" placeholder="Yrs" value="' + esc(v.age == null ? '' : v.age) + '"></div>' +
+        '<div><label class="lbl">Sex <i>*</i></label><div class="seg" id="sex">' + ['Male', 'Female', 'Other'].map(s => '<button type="button" data-s="' + s + '" class="' + (v.sex === s ? 'on' : '') + '">' + s + '</button>').join('') + '</div></div></div>' +
+        '<label class="lbl">Chief complaints <i>*</i></label><textarea class="ta" id="cc" placeholder="Presenting complaints, duration">' + esc(v.cc || '') + '</textarea>' +
+        '<label class="lbl">Mobile (optional)</label><input class="inp" id="mobile" type="tel" inputmode="tel" placeholder="For quick call" value="' + esc(v.mobile || '') + '">', true) +
+      '<div class="bar"><div class="in"><button class="btn" data-act="save">' + (ex ? 'Save Changes' : 'Save &amp; Continue') + '</button></div></div>',
+    acts: {
+      discard: async () => { await metaSet('draft', null); replace('addPatient', {}); },
+      save: async () => {
+        const f = { uhid: $('#uhid').value.trim(), name: $('#name').value.trim(), age: $('#age').value.trim(), cc: $('#cc').value.trim() };
+        const sex = (($('#sex .on') || {}).dataset || {}).s;
+        let bad = false;
+        const mark = (sel, cond) => { const el = $(sel); el.classList.toggle('err', !cond); if (!cond) bad = true; };
+        mark('#uhid', !!f.uhid); mark('#name', !!f.name); mark('#cc', !!f.cc);
+        const ageN = Number(f.age); mark('#age', f.age !== '' && Number.isInteger(ageN) && ageN >= 0 && ageN <= 120);
+        $('#sex').classList.toggle('err', !sex); if (!sex) bad = true;
+        if (bad) { toast('Please fill the highlighted fields'); const e = $('.err'); e && e.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
+        const dup = await Repo.uhidTaken(f.uhid, id);
+        if (dup) { toast('UHID already exists'); return; }
+        try {
+          const pid = await Repo.savePatient(Object.assign({}, ex || { dx: [], addDx: null }, { id: id, uhid: f.uhid, name: f.name, age: ageN, sex, cc: f.cc, mobile: nn($('#mobile').value) }));
+          if (!ex) { await metaSet('draft', null); replace('dx', { pid, isNew: true }); }
+          else { toast('Saved'); back(); }
+        } catch (e) { toast(/Constraint/i.test(String(e && e.name)) ? 'UHID already exists' : 'Could not save: ' + (e && e.message)); }
+      }
+    },
+    bind: root => {
+      $('#sex').onclick = e => { const b = e.target.closest('[data-s]'); if (!b) return; $$('#sex button').forEach(x => x.classList.toggle('on', x === b)); $('#sex').classList.remove('err'); saveDraft(); };
+      const chk = debounce(async () => {
+        if (!$('#uhid')) return; const v2 = $('#uhid').value; const d = v2.trim() ? await Repo.uhidTaken(v2, id) : null;
+        $('#uhid').classList.toggle('err', !!d);
+        $('#dup').innerHTML = d ? '<div class="dup">' + ic('alert', 18) + '<span>UHID already registered to <b>' + esc(d.name) + '</b></span><button data-act="openDup" data-id="' + d.id + '">Open</button></div>' : '';
+      }, 250);
+      const saveDraft = debounce(async () => {
+        if (id || !$('#uhid')) return;
+        await metaSet('draft', { uhid: $('#uhid').value, name: $('#name').value, age: $('#age').value, cc: $('#cc').value, mobile: $('#mobile').value, sex: (($('#sex .on') || {}).dataset || {}).s || null });
+      }, 400);
+      root.addEventListener('input', e => { e.target.classList.remove('err'); if (e.target.id === 'uhid') chk(); saveDraft(); });
+      if (v.uhid) chk();
+      if (!ex && !v.uhid) setTimeout(() => { const u = $('#uhid'); u && u.focus(); }, 250);
+    }
+  };
+};
+ACT.openDup = el => replace('profile', { id: +el.dataset.id });
+
+/* ---------------- diagnosis selection ---------------- */
+Views.dx = async ({ pid, isNew }) => {
+  const p = await Repo.patient(pid);
+  const sel = new Map((p.dx || []).map(d => [d.name, d.lat || null]));
+  let other = p.addDx || '';
+  const grid = () => '<div class="two" style="grid-template-columns:1fr 1fr;gap:10px">' + DX_OPTIONS.map(o =>
+    '<div class="card dxcard ' + (sel.has(o.name) ? 'sel' : '') + '" data-act="toggle" data-n="' + esc(o.name) + '" style="margin:0;padding:12px"><div class="iconbox">' + dxIc(o.name, 26) + '</div><div class="nm" style="font-size:14px">' + esc(o.name) + '</div>' +
+    (sel.has(o.name) ? '<span class="chk r on" style="width:22px;height:22px">' + ic('check', 14) + '</span>' : '') + '</div>').join('') + '</div>';
+  const subs = () => {
+    let h = '';
+    DX_OPTIONS.forEach(o => {
+      if (!sel.has(o.name)) return;
+      if (o.paired) h += '<div class="card" style="margin-top:10px"><b>' + esc(o.name) + '</b> <span class="small">- laterality</span><div class="seg" style="margin-top:8px" data-lat="' + esc(o.name) + '">' + LATERALITY.map(l => '<button type="button" data-l="' + l + '" class="' + (sel.get(o.name) === l ? 'on' : '') + '">' + l + '</button>').join('') + '</div></div>';
+      if (o.name === 'Other') h += '<div class="card" style="margin-top:10px"><b>Other diagnosis</b><input class="inp" id="oth" style="margin-top:8px" placeholder="Specify diagnosis" value="' + esc(other) + '"></div>';
+    });
+    return h;
+  };
+  return {
+    html: hdr('Diagnosis') + wrapPage('<div class="phead" style="margin-bottom:6px"><div class="avatar">' + esc(initials(p.name)) + '</div><div><div class="t-name">' + esc(p.name) + '</div><div class="t-sub"><b>' + esc(p.uhid) + '</b></div></div></div>' +
+      '<div class="small" style="margin:10px 2px 12px">Tap to select. You can choose more than one.</div><div id="dxg">' + grid() + '</div><div id="dxs">' + subs() + '</div>', true) +
+      '<div class="bar"><div class="in"><div class="row">' + (isNew ? '<button class="btn o" style="height:52px" data-act="skip">Skip</button>' : '') + '<button class="btn" data-act="save">Save</button></div></div></div>',
+    acts: {
+      toggle: el => { const n = el.dataset.n; if (sel.has(n)) sel.delete(n); else sel.set(n, null); $('#dxg').innerHTML = grid(); $('#dxs').innerHTML = subs(); },
+      skip: () => replace('profile', { id: pid }),
+      save: async () => {
+        const o = $('#oth'); if (o) other = o.value.trim();
+        const dx = [...sel.entries()].map(([name, lat]) => lat ? { name, lat } : { name });
+        await Repo.setDx(pid, dx, sel.has('Other') ? other : null);
+        if (isNew) replace('profile', { id: pid }); else { toast('Diagnosis saved'); back(); }
+      }
+    },
+    bind: root => {
+      root.addEventListener('click', e => {
+        const b = e.target.closest('[data-l]'); if (!b) return;
+        const n = b.parentElement.dataset.lat; sel.set(n, sel.get(n) === b.dataset.l ? null : b.dataset.l);
+        $$('button', b.parentElement).forEach(x => x.classList.toggle('on', x === b && sel.get(n) === b.dataset.l));
+      });
+    }
+  };
+};
+
+/* ---------------- follow-ups tab ---------------- */
+const FSTATE = { f: 'Due Today' };
+Views.followups = async () => {
+  const counts = await Repo.fuCounts();
+  let first = counts[FSTATE.f] === 0 && FSTATE.f === 'Due Today' && counts.Overdue ? 'Overdue' : FSTATE.f;
+  FSTATE.f = first;
+  const items = await Repo.fuList(FSTATE.f);
+  const body = items.length ? items.map(fuTile).join('') : emptyBox('cal', 'Nothing here', FSTATE.f === 'Completed' ? 'Recorded visits will appear here.' : 'No follow-ups in this list.');
+  return {
+    html: hdr('Follow-ups', { back: false }) + '<div style="height:12px"></div><div class="chips" id="ff" style="max-width:640px;margin:0 auto">' +
+      FU_FILTERS.map(f => '<button class="chip ' + (FSTATE.f === f ? 'on' : '') + '" data-f="' + f + '">' + f + '<span class="c">' + counts[f] + '</span></button>').join('') + '</div>' + wrapPage('<div id="fl">' + body + '</div>', true) + navbar('followups'),
+    bind: () => {
+      $('#ff').onclick = async e => {
+        const b = e.target.closest('[data-f]'); if (!b) return; FSTATE.f = b.dataset.f; $$('#ff .chip').forEach(x => x.classList.toggle('on', x === b));
+        const l = await Repo.fuList(FSTATE.f); $('#fl').innerHTML = l.length ? l.map(fuTile).join('') : emptyBox('cal', 'Nothing here', FSTATE.f === 'Completed' ? 'Recorded visits will appear here.' : 'No follow-ups in this list.');
+      };
+    }
+  };
+};
+
+/* ===================== views: patient profile, forms ===================== */
+
+const TABS = [['overview', 'Overview'], ['media', 'Media'], ['inv', 'Investigations'], ['surgery', 'Surgery'], ['fu', 'Follow-up']];
+
+Views.profile = async (params) => {
+  const pid = params.id;
+  const p = await Repo.patient(pid);
+  if (!p) return { html: hdr('Patient') + wrapPage(emptyBox('alert', 'Patient not found', 'This record may have been deleted.')) };
+  let tab = params.tab || 'overview';
+  let mcat = 'All';
+  const dx = (p.dx || []);
+
+  const head = '<div class="wrap" style="padding-top:14px"><div class="card"><div class="phead"><div class="avatar lg">' + esc(initials(p.name)) + '</div><div style="flex:1;min-width:0">' +
+    '<div class="t-name" style="font-size:17px;white-space:normal">' + esc(p.name) + (p.isDemo ? ' <span class="pill grey">Demo</span>' : '') + '</div>' +
+    '<div style="font-size:19px;font-weight:700;color:var(--link);letter-spacing:.5px;overflow-wrap:anywhere">' + esc(p.uhid) + '</div>' +
+    '<div class="t-sub">' + p.age + ' yrs &middot; ' + esc(p.sex) + '</div></div>' +
+    (p.mobile ? '<a class="iconbox" href="tel:' + esc(p.mobile) + '" aria-label="Call" style="background:var(--btn);color:#fff">' + ic('phone', 20) + '</a>' : '') + '</div>' +
+    (dx.length ? '<div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px">' + dx.map(d => '<span class="pill">' + esc(dxLabel(d, p)) + '</span>').join('') + '</div>' : '') + '</div></div>';
+
+  const tabsHtml = () => '<div class="in">' + TABS.map(t => '<button class="tab ' + (t[0] === tab ? 'on' : '') + '" data-act="ptab" data-t="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>';
+
+  /* ---- content builders ---- */
+  async function overview() {
+    const [fus, notes, tl] = await Promise.all([Repo.fus(pid), Repo.notes(pid), Repo.timeline(pid)]);
+    const pend = fus.find(f => !f.completed);
+    const dxCards = dx.length ? dx.map(d => '<div class="card tile" style="margin-bottom:8px"><div class="iconbox">' + dxIc(d.name, 26) + '</div><div class="grow"><div class="t-name">' + esc(d.name === 'Other' && p.addDx ? p.addDx : d.name) + '</div><div class="t-sub">' + (d.lat ? esc(d.lat) : 'Laterality not specified') + '</div></div></div>').join('') :
+      '<div class="card" style="text-align:center"><div class="small" style="margin-bottom:10px">No diagnosis selected yet</div><button class="btn sm" style="width:auto;padding:0 22px" data-act="editDx">Select diagnosis</button></div>';
+    return '<div class="qa" style="margin-top:14px"><button data-act="addInv"><div class="iconbox">' + ic('flask', 22) + '</div>Investigation</button><button data-act="addMedia"><div class="iconbox">' + ic('camera', 22) + '</div>Add Media</button><button data-act="visit"><div class="iconbox">' + ic('clip2', 22) + '</div>Record Visit</button></div>' +
+      '<div class="sec"><h2>Chief Complaints</h2></div><div class="card pre">' + esc(p.cc || 'Not recorded') + '</div>' +
+      '<div class="sec"><h2>Diagnosis</h2>' + (dx.length ? '<button data-act="editDx">Change</button>' : '') + '</div>' + dxCards +
+      '<div class="sec"><h2>Next Follow-up</h2></div>' + (pend ? '<div class="card tap" data-act="ptab" data-t="fu" style="display:flex;align-items:center;gap:12px">' + ic('cal', 22) + '<div style="flex:1"><div class="big-date">' + fmt(pend.date) + '</div></div><span class="pill ' + (dayDiff(pend.date) < 0 ? 'red' : dayDiff(pend.date) === 0 ? 'amber' : '') + '">' + esc(relDays(pend.date)) + '</span></div>' : '<div class="card small" style="text-align:center">None scheduled</div>') +
+      '<div class="sec"><h2>Clinical Notes</h2><button data-act="addNote">+ Add note</button></div>' +
+      (notes.length ? notes.map(n => '<div class="card"><div class="pre">' + esc(n.note) + '</div><div style="display:flex;align-items:center;margin-top:8px"><span class="small" style="flex:1">' + fmtDT(n.createdAt) + '</span><button class="linkbtn" style="color:var(--redd)" data-act="delNote" data-id="' + n.id + '">Delete</button></div></div>').join('') : '<div class="card small" style="text-align:center">No notes</div>') +
+      '<div class="sec"><h2>Timeline</h2></div><div class="tl">' + tl.slice().reverse().map(e => '<div class="ev ' + (e.type === 'sched' ? 'hollow' : e.type === 'surgery' ? 'red' : e.type === 'fu' ? 'green' : '') + '"><div class="card tap" data-act="ptab" data-t="' + e.tab + '" style="margin:0;padding:12px 14px"><div style="display:flex;gap:8px"><b style="flex:1">' + esc(e.title) + '</b><span class="small">' + fmt(e.date) + '</span></div>' + (e.sub ? '<div class="small" style="margin-top:2px">' + esc(e.sub) + '</div>' : '') + '</div></div>').join('') + '</div>' +
+      '<div class="small" style="text-align:center;margin-top:18px">Registered ' + fmt((p.createdAt || '').slice(0, 10)) + '</div>';
+  }
+  let mediaCache = [];
+  async function mediaTab() {
+    mediaCache = await Repo.media(pid);
+    const counts = c => c === 'All' ? mediaCache.length : mediaCache.filter(m => m.category === c).length;
+    const shown = mcat === 'All' ? mediaCache : mediaCache.filter(m => m.category === mcat);
+    return '<div class="chips" id="mc" style="padding:12px 0 6px">' + ['All'].concat(MEDIA_CATS).map(c => '<button class="chip sm ' + (c === mcat ? 'on' : '') + '" data-act="mcat" data-c="' + c + '">' + c + '<span class="c">' + counts(c) + '</span></button>').join('') + '</div>' +
+      (shown.length ? '<div class="mgrid" style="margin-top:6px">' + shown.map(m => '<button class="mi ' + (m.kind === 'image' ? '' : 'file') + '" data-act="openMedia" data-id="' + m.id + '">' + (m.kind === 'image' && m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 28) + '<span>' + esc((m.name || '').slice(0, 18)) + '</span>') + '<div class="cap">' + esc(m.category) + ' &middot; ' + fmt(m.takenAt).slice(0, -5) + '</div></button>').join('') + '</div>' :
+        emptyBox('image', mcat === 'All' ? 'No media yet' : 'No ' + mcat + ' items', 'Add clinical photos, scans or documents.'));
+  }
+  async function invTab() {
+    const [invs, media] = await Promise.all([Repo.invs(pid), Repo.media(pid)]);
+    const done = new Set(invs.map(i => i.name));
+    return '<div class="sec"><h2>Checklist</h2><span class="small">' + [...done].filter(n => INV_OPTIONS.includes(n)).length + ' / ' + INV_OPTIONS.length + '</span></div>' +
+      '<div class="card" style="padding:4px 14px">' + INV_OPTIONS.map(n => '<div class="irow" data-act="addInvN" data-n="' + esc(n) + '" style="cursor:pointer;align-items:center"><span class="chk ' + (done.has(n) ? 'on' : '') + '">' + (done.has(n) ? ic('check', 14) : '') + '</span><div style="flex:1;font-weight:600">' + esc(n) + '</div><span class="small">' + (done.has(n) ? invs.filter(i => i.name === n).length + ' recorded' : 'Add') + '</span>' + ic('chev', 16) + '</div>').join('') + '</div>' +
+      '<div class="sec"><h2>Recorded</h2></div>' + (invs.length ? invs.map(i => {
+        const att = media.filter(m => m.refType === 'investigation' && m.refId === i.id);
+        return '<div class="card"><div style="display:flex;align-items:center;gap:12px;cursor:pointer" data-act="editInv" data-id="' + i.id + '"><div class="iconbox">' + ic(INV_ICON[i.name] || 'file', 22) + '</div><div style="flex:1;min-width:0"><div class="t-name">' + esc(i.name) + '</div><div class="t-sub">' + fmt(i.date) + '</div></div>' + ic('edit', 18) + '</div>' +
+          (i.notes ? '<div class="pre small" style="margin-top:8px;color:var(--navy)">' + esc(i.notes) + '</div>' : '') +
+          (att.length ? '<div class="thumbs">' + att.map((m, k) => '<button class="th ' + (m.kind === 'image' ? '' : 'file') + '" data-act="openAtt" data-ref="' + i.id + '" data-k="' + k + '">' + (m.kind === 'image' && m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '</button>').join('') + '</div>' : '') + '</div>';
+      }).join('') : '<div class="card small" style="text-align:center">Nothing recorded. Tap a test above.</div>');
+  }
+  async function surgeryTab() {
+    const [ss, media] = await Promise.all([Repo.surgeries(pid), Repo.media(pid)]);
+    return (ss.length ? ss.map(s => {
+      const att = media.filter(m => m.refType === 'surgery' && m.refId === s.id);
+      return '<div class="card tap" data-act="editSurg" data-id="' + s.id + '"><div style="display:flex;gap:10px;align-items:center"><div class="iconbox">' + ic('scalpel', 22) + '</div><div style="flex:1;min-width:0"><div class="t-name" style="white-space:normal">' + esc(s.procedure) + '</div><div class="t-sub">' + fmt(s.date) + '</div></div>' + ic('chev', 18) + '</div>' +
+        (s.indication ? '<div class="small" style="margin-top:8px;color:var(--navy)">' + esc(s.indication) + '</div>' : '') +
+        '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' + (s.hpe ? '<span class="pill">HPE</span>' : '') + (s.postop ? '<span class="pill grey">Post-op notes</span>' : '') + (att.length ? '<span class="pill grey">' + att.length + ' attachment' + (att.length > 1 ? 's' : '') + '</span>' : '') + '</div></div>';
+    }).join('') : emptyBox('scalpel', 'No surgeries recorded', 'Add the procedure, findings and histopathology.'));
+  }
+  async function fuTab() {
+    const fus = await Repo.fus(pid);
+    const pend = fus.find(f => !f.completed), hist = fus.filter(f => f.completed);
+    return '<div class="sec"><h2>Next Follow-up</h2></div>' + (pend ?
+      '<div class="card"><div style="display:flex;align-items:center;gap:10px"><div class="big-date" style="flex:1">' + fmt(pend.date) + '</div><span class="pill ' + (dayDiff(pend.date) < 0 ? 'red' : dayDiff(pend.date) === 0 ? 'amber' : '') + '">' + esc(relDays(pend.date)) + '</span></div>' +
+      '<div class="row" style="margin-top:12px"><button class="btn sm" data-act="visit">Record visit</button><button class="btn o sm" data-act="chgDate">Change date</button></div>' +
+      '<div style="text-align:center;margin-top:8px"><button class="linkbtn" style="color:var(--redd)" data-act="cancelFu" data-id="' + pend.id + '">Cancel follow-up</button></div></div>' :
+      '<div class="card"><div class="small" style="margin-bottom:10px">None scheduled. Schedule after:</div><div class="chips wrapchips">' + INTERVALS.map(i => '<button class="chip sm" data-act="quickSched" data-i="' + i + '">' + i + '</button>').join('') + '</div>' +
+      '<div style="margin-top:12px"><button class="btn sm" data-act="visit">Record a visit now</button></div></div>') +
+      '<div class="sec"><h2>Visit History</h2></div>' + (hist.length ? hist.map(f => '<div class="card tap" data-act="editVisit" data-id="' + f.id + '"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">' + fmt(f.date) + '</b>' +
+        (f.status ? '<span class="pill ' + (f.status === 'Improving' ? 'green' : f.status === 'Worsening' ? 'red' : 'amber') + '">' + f.status + '</span>' : '<span class="pill grey">Status not recorded</span>') + '</div>' +
+        (f.notes ? '<div class="pre small" style="margin-top:6px;color:var(--navy)">' + esc(f.notes) + '</div>' : '') + (f.nextDate ? '<div class="small" style="margin-top:6px">Next planned: ' + fmt(f.nextDate) + '</div>' : '') + '</div>').join('') : '<div class="card small" style="text-align:center">No visits recorded yet</div>');
+  }
+  const barFor = () => tab === 'media' ? '<div class="bar"><div class="in"><button class="btn" data-act="addMedia">' + ic('plus', 20) + ' Add Photo or File</button></div></div>' :
+    tab === 'surgery' ? '<div class="bar"><div class="in"><button class="btn" data-act="addSurg">' + ic('plus', 20) + ' Add Surgery</button></div></div>' :
+    tab === 'fu' ? '<div class="bar"><div class="in"><button class="btn" data-act="visit">' + ic('clip2', 20) + ' Record Visit</button></div></div>' : '';
+  async function fill() {
+    const c = $('#tabc'); if (!c) return;
+    const html = tab === 'overview' ? await overview() : tab === 'media' ? await mediaTab() : tab === 'inv' ? await invTab() : tab === 'surgery' ? await surgeryTab() : await fuTab();
+    c.innerHTML = html; $('#tabbar').innerHTML = barFor();
+    const tw = $('#tabw'); if (tw) tw.innerHTML = tabsHtml();
+    c.parentElement.classList.toggle('nobar', !barFor());
+  }
+  const attGroup = async (ref, k, type) => {
+    const media = (await Repo.media(pid)).filter(m => m.refType === type && m.refId === ref);
+    openViewer(media, k, fill);
+  };
+
+  const acts = {
+    ptab: el => { tab = el.dataset.t; window.scrollTo(0, 0); fill(); },
+    mcat: el => { mcat = el.dataset.c; fill(); },
+    menu: () => sheet('<h3>' + esc(p.name) + '</h3><div style="height:8px"></div>' +
+      [['editP', 'edit', 'Edit patient details'], ['editDx', 'sliders', 'Change diagnosis'], ['summary', 'printer', 'Print / share summary'], ['delP', 'trash', 'Delete patient']].map(r => '<div class="mrow" data-m="' + r[0] + '" style="padding:14px 4px;border-bottom:1px solid var(--bd);' + (r[0] === 'delP' ? 'color:var(--redd)' : '') + '">' + ic(r[1], 20) + '<div class="grow t">' + r[2] + '</div></div>').join(''),
+      (s, close) => { s.onclick = async e => { const m = e.target.closest('[data-m]'); if (!m) return; close(); await acts[m.dataset.m](); }; }),
+    editP: () => go('addPatient', { id: pid }),
+    editDx: () => go('dx', { pid }),
+    summary: () => go('summary', { id: pid }),
+    addNote: () => sheet('<h3>Clinical note</h3><textarea class="ta" id="nt" placeholder="Write a note" style="margin-top:10px"></textarea><div style="height:14px"></div><button class="btn" id="ns">Save note</button>', (s, close) => {
+      setTimeout(() => $('#nt', s).focus(), 200);
+      $('#ns', s).onclick = async () => { const v = $('#nt', s).value; if (!v.trim()) return toast('Write something first'); await Repo.addNote(pid, v); close(); fill(); };
+    }),
+    delNote: async el => { if (await confirmDlg('Delete note?', 'This cannot be undone.', 'Delete', true)) { await Repo.delNote(+el.dataset.id); fill(); } },
+    /* media */
+    openMedia: el => { const shown = mcat === 'All' ? mediaCache : mediaCache.filter(m => m.category === mcat); openViewer(shown, shown.findIndex(m => m.id === +el.dataset.id), fill); },
+    addMedia: () => mediaSheet(pid, fill),
+    openAtt: el => attGroup(+el.dataset.ref, +el.dataset.k, 'investigation'),
+    /* investigations */
+    addInv: () => { tab = 'inv'; fill(); window.scrollTo(0, 0); },
+    addInvN: el => invSheet(pid, { name: el.dataset.n }, fill),
+    editInv: async el => invSheet(pid, { rec: await dbGet('investigations', +el.dataset.id) }, fill),
+    /* surgery */
+    addSurg: () => go('surgeryForm', { pid }),
+    editSurg: el => go('surgeryForm', { pid, id: +el.dataset.id }),
+    /* follow-ups */
+    visit: () => go('visitForm', { pid }),
+    editVisit: el => go('visitForm', { pid, id: +el.dataset.id }),
+    quickSched: async el => { await Repo.schedule(pid, iso(nextDateFor(el.dataset.i, today()))); toast('Follow-up scheduled'); fill(); },
+    chgDate: async () => {
+      const pend = (await Repo.fus(pid)).find(f => !f.completed);
+      sheet('<h3>Change follow-up date</h3><input class="inp" type="date" id="cd" style="margin-top:12px" value="' + (pend ? pend.date : iso(today())) + '"><div class="chips wrapchips" style="margin-top:12px">' + INTERVALS.map(i => '<button class="chip sm" data-i="' + i + '">' + i + '</button>').join('') + '</div><div style="height:16px"></div><button class="btn" id="cs">Save</button>', (s, close) => {
+        s.addEventListener('click', e => { const c = e.target.closest('[data-i]'); if (c) $('#cd', s).value = iso(nextDateFor(c.dataset.i, today())); });
+        $('#cs', s).onclick = async () => { const v = $('#cd', s).value; if (!v) return toast('Pick a date'); await Repo.schedule(pid, v); close(); toast('Follow-up updated'); fill(); };
+      });
+    },
+    cancelFu: async el => { if (await confirmDlg('Cancel follow-up?', 'The scheduled follow-up will be removed.', 'Remove', true)) { await Repo.delFu(+el.dataset.id); fill(); } }
+  };
+  /* delete patient: return to the list */
+  acts.delP = async () => {
+    if (!await confirmDlg('Delete patient?', 'This permanently deletes ' + p.name + ' with all investigations, media, surgeries and follow-ups.', 'Delete', true)) return;
+    await withBusy('Deleting...', () => Repo.deletePatient(pid));
+    toast('Patient deleted');
+    if (STACK.length > 1) back(); else setTab('patients');
+  };
+  return {
+    html: hdr('Patient', { right: '<button class="ib" data-act="menu" aria-label="Menu">' + ic('more', 22) + '</button>' }) + head + '<div class="tabs" id="tabw" style="margin-top:14px">' + tabsHtml() + '</div>' +
+      '<div class="wrap page"><div id="tabc"></div></div><div id="tabbar"></div>',
+    acts, bind: () => fill()
+  };
+};
+
+/* ---------------- add media sheet ---------------- */
+function mediaSheet(pid, done) {
+  let cat = null;
+  sheet('<h3>Add media</h3><div class="small">Photos are resized to save space. Files are stored as they are.</div>' +
+    attachHtml('mattach', 'Pick images or documents') +
+    '<div class="lbl">Category <i>*</i></div><div class="chips wrapchips" id="mcats">' + chipsHtml(MEDIA_CATS, null, 'data-c') + '</div>' +
+    '<div class="lbl">Date</div><input class="inp" type="date" id="mdate" value="' + iso(today()) + '">' +
+    '<div class="lbl">Caption</div><input class="inp" id="mcap" placeholder="Optional">' +
+    '<div style="height:16px"></div><button class="btn" id="msave">Save</button>', (s, close) => {
+    const st = bindAttach($('#mattach', s));
+    $('#mcats', s).onclick = e => { const c = e.target.closest('[data-c]'); if (!c) return; cat = c.dataset.c; $$('#mcats .chip', s).forEach(x => x.classList.toggle('on', x === c)); };
+    $('#msave', s).onclick = async () => {
+      if (!st.files.length) return toast('Add at least one photo or file');
+      if (!cat) return toast('Choose a category');
+      await withBusy('Saving...', () => saveStaged(st, { pid, category: cat, caption: $('#mcap', s).value, takenAt: $('#mdate', s).value || iso(today()) }));
+      close(); toast('Saved'); done();
+    };
+  });
+}
+
+/* ---------------- investigation sheet ---------------- */
+async function invSheet(pid, o, done) {
+  const rec = o.rec || null;
+  const name0 = rec ? rec.name : o.name;
+  const existing = rec ? (await Repo.media(pid)).filter(m => m.refType === 'investigation' && m.refId === rec.id) : [];
+  sheet('<h3>' + (rec ? 'Edit ' : 'Add ') + esc(name0) + '</h3>' +
+    (name0 === 'Other' && !rec ? '<div class="lbl">Test name <i>*</i></div><input class="inp" id="iname" placeholder="e.g. Uroflowmetry">' : '') +
+    '<div class="lbl">Date <i>*</i></div><input class="inp" type="date" id="idate" value="' + (rec ? rec.date : iso(today())) + '">' +
+    '<div class="lbl">Result / notes</div><textarea class="ta" id="inotes" style="min-height:90px" placeholder="Key values, impression">' + esc(rec ? rec.notes || '' : '') + '</textarea>' +
+    (existing.length ? '<div class="lbl">Attached</div><div class="thumbs" id="iex">' + existing.map((m, k) => '<div class="th ' + (m.kind === 'image' ? '' : 'file') + '">' + (m.kind === 'image' && m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '<button class="x red" data-del="' + m.id + '">' + ic('x', 12) + '</button></div>').join('') + '</div>' : '') +
+    attachHtml('iattach', 'Attach report / images') + '<div style="height:16px"></div><button class="btn" id="isave">Save</button>' +
+    (rec ? '<div style="height:10px"></div><button class="btn o" style="color:var(--redd);border-color:var(--red)" id="idel">Delete this record</button>' : ''), (s, close) => {
+    const st = bindAttach($('#iattach', s));
+    const ex = $('#iex', s);
+    if (ex) ex.onclick = async e => { const b = e.target.closest('[data-del]'); if (!b) return; if (await confirmDlg('Remove attachment?', 'This cannot be undone.', 'Remove', true)) { const m = existing.find(x => x.id === +b.dataset.del); await Repo.delMedia(m); b.parentElement.remove(); } };
+    $('#isave', s).onclick = async () => {
+      const name = rec ? rec.name : (name0 === 'Other' ? ($('#iname', s).value.trim() || '') : name0);
+      const date = $('#idate', s).value;
+      if (!name) return toast('Enter the test name');
+      if (!date) return toast('Pick a date');
+      await withBusy('Saving...', async () => {
+        let id = rec ? rec.id : null;
+        if (rec) await Repo.updInv(rec.id, date, $('#inotes', s).value); else id = await Repo.addInv(pid, name, date, $('#inotes', s).value);
+        await saveStaged(st, { pid, category: invCat(name), takenAt: date, refType: 'investigation', refId: id, caption: name });
+      });
+      close(); toast('Saved'); done();
+    };
+    const d = $('#idel', s);
+    if (d) d.onclick = async () => { if (await confirmDlg('Delete ' + rec.name + '?', 'The record and its attachments will be deleted.', 'Delete', true)) { await Repo.delInv(rec.id); close(); done(); } };
+  });
+}
+
+/* ---------------- surgery form ---------------- */
+Views.surgeryForm = async ({ pid, id }) => {
+  const s = id ? await dbGet('surgeries', id) : null;
+  const v = s || {};
+  const media = s ? (await Repo.media(pid)).filter(m => m.refType === 'surgery' && m.refId === s.id) : [];
+  let cat = null;
+  const ta = (k, l, ph) => '<label class="lbl">' + l + '</label><textarea class="ta" id="' + k + '" style="min-height:84px" placeholder="' + ph + '">' + esc(v[k] || '') + '</textarea>';
+  return {
+    html: hdr(s ? 'Edit Surgery' : 'Add Surgery') + wrapPage(
+      '<label class="lbl" style="margin-top:4px">Procedure <i>*</i></label><div class="chips wrapchips" id="procs">' + PROCEDURES.map(x => '<button type="button" class="chip sm ' + (v.procedure === x ? 'on' : '') + '" data-p="' + esc(x) + '">' + esc(x) + '</button>').join('') + '</div>' +
+      '<input class="inp" id="proc" style="margin-top:10px" placeholder="Procedure name (type or pick above)" value="' + esc(v.procedure || '') + '">' +
+      '<label class="lbl">Date <i>*</i></label><input class="inp" type="date" id="sdate" value="' + (v.date || iso(today())) + '">' +
+      ta('indication', 'Indication', 'Why was it done?') + ta('findings', 'Operative findings', 'Findings') + ta('notes', 'Operative notes', 'Technique, complications') +
+      ta('hpe', 'Histopathology (HPE)', 'Report summary') + ta('postop', 'Post-op notes', 'Recovery, catheter, discharge') +
+      (media.length ? '<div class="lbl">Attached</div><div class="thumbs" id="sex">' + media.map(m => '<div class="th ' + (m.kind === 'image' ? '' : 'file') + '">' + (m.kind === 'image' && m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '<button class="x red" data-del="' + m.id + '">' + ic('x', 12) + '</button></div>').join('') + '</div>' : '') +
+      attachHtml('sattach', 'Photos / reports') + '<div class="lbl" style="margin-top:12px">Label new attachments as</div><div class="chips wrapchips" id="scats">' + chipsHtml(['Pre-op', 'Post-op', 'Other'], null, 'data-c') + '</div>' +
+      (s ? '<div style="height:22px"></div><button class="btn o" style="color:var(--redd);border-color:var(--red)" data-act="del">Delete surgery</button>' : ''), true) +
+      '<div class="bar"><div class="in"><button class="btn" data-act="save">Save Surgery</button></div></div>',
+    acts: {
+      save: async () => {
+        const proc = $('#proc').value.trim(), date = $('#sdate').value;
+        if (!proc) return toast('Procedure is required');
+        if (!date) return toast('Date is required');
+        const st = Views._sst;
+        await withBusy('Saving...', async () => {
+          const sid = await Repo.saveSurgery({ id: s ? s.id : undefined, createdAt: s ? s.createdAt : undefined, patientId: pid, procedure: proc, date, indication: $('#indication').value, findings: $('#findings').value, notes: $('#notes').value, hpe: $('#hpe').value, postop: $('#postop').value });
+          await saveStaged(st, { pid, category: cat || 'Other', takenAt: date, refType: 'surgery', refId: sid, caption: proc });
+        });
+        toast('Surgery saved'); back();
+      },
+      del: async () => { if (await confirmDlg('Delete surgery?', 'The record and its attachments will be deleted.', 'Delete', true)) { await Repo.delSurgery(s.id); back(); } }
+    },
+    bind: root => {
+      Views._sst = bindAttach($('#sattach'));
+      $('#procs').onclick = e => { const b = e.target.closest('[data-p]'); if (!b) return; $('#proc').value = b.dataset.p; $$('#procs .chip').forEach(x => x.classList.toggle('on', x === b)); };
+      $('#scats').onclick = e => { const c = e.target.closest('[data-c]'); if (!c) return; cat = c.dataset.c; $$('#scats .chip').forEach(x => x.classList.toggle('on', x === c)); };
+      const ex = $('#sex');
+      if (ex) ex.onclick = async e => { const b = e.target.closest('[data-del]'); if (!b) return; if (await confirmDlg('Remove attachment?', 'This cannot be undone.', 'Remove', true)) { await Repo.delMedia(media.find(x => x.id === +b.dataset.del)); b.parentElement.remove(); } };
+    }
+  };
+};
+
+/* ---------------- visit / follow-up form ---------------- */
+Views.visitForm = async ({ pid, id }) => {
+  const f = id ? await dbGet('followups', id) : null;
+  const pend = !f ? (await Repo.fus(pid)).find(x => !x.completed) : null;
+  const date0 = f ? f.date : iso(today());
+  let status = f ? f.status : null;
+  let next = f ? f.nextDate : null, label = null;
+  const media = f ? (await Repo.media(pid)).filter(m => m.refType === 'followup' && m.refId === f.id) : [];
+  return {
+    html: hdr(f ? 'Edit Visit' : 'Record Visit') + wrapPage(
+      (pend ? '<div class="banner">' + ic('cal', 16) + ' Scheduled for ' + fmt(pend.date) + '. Saving replaces it.</div>' : '') +
+      '<label class="lbl" style="margin-top:6px">Visit date <i>*</i></label><input class="inp" type="date" id="vdate" value="' + date0 + '">' +
+      '<label class="lbl">Clinical status</label><div class="seg" id="vstat">' + STATUSES.map(s => '<button type="button" data-s="' + s + '" class="' + (status === s ? 'on' : '') + '">' + s + '</button>').join('') + '</div><div class="small" style="margin-top:5px">Left blank if not assessed.</div>' +
+      '<label class="lbl">Notes</label><textarea class="ta" id="vnotes" placeholder="Symptoms, examination, plan">' + esc(f ? f.notes || '' : '') + '</textarea>' +
+      '<label class="lbl">Next follow-up</label><div class="chips wrapchips" id="vint">' + chipsHtml(INTERVALS.concat(['None']), f ? (f.nextDate ? null : 'None') : null, 'data-i') + '</div>' +
+      '<input class="inp" type="date" id="vnext" style="margin-top:10px" value="' + (next || '') + '"><div class="small" id="vnl" style="margin-top:5px">' + (next ? 'Next: ' + fmt(next) : 'Pick an interval or a date') + '</div>' +
+      (media.length ? '<div class="lbl">Attached</div><div class="thumbs" id="vex">' + media.map(m => '<div class="th ' + (m.kind === 'image' ? '' : 'file') + '">' + (m.kind === 'image' && m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '<button class="x red" data-del="' + m.id + '">' + ic('x', 12) + '</button></div>').join('') + '</div>' : '') +
+      attachHtml('vattach', 'Photos / reports') +
+      (f ? '<div style="height:22px"></div><button class="btn o" style="color:var(--redd);border-color:var(--red)" data-act="del">Delete visit</button>' : ''), true) +
+      '<div class="bar"><div class="in"><button class="btn" data-act="save">Save Visit</button></div></div>',
+    acts: {
+      save: async () => {
+        const date = $('#vdate').value; if (!date) return toast('Visit date is required');
+        const nx = $('#vnext').value || null;
+        if (nx && nx < date) return toast('Next follow-up cannot be before the visit');
+        await withBusy('Saving...', async () => {
+          const vid = await Repo.saveVisit({ pid, existingId: id, date, notes: $('#vnotes').value, status, nextDate: nx });
+          await saveStaged(Views._vst, { pid, category: 'Follow-up', takenAt: date, refType: 'followup', refId: vid });
+        });
+        toast('Visit saved'); back();
+      },
+      del: async () => { if (await confirmDlg('Delete this visit?', 'The record and its attachments will be deleted.', 'Delete', true)) { await Repo.delFu(f.id); back(); } }
+    },
+    bind: root => {
+      Views._vst = bindAttach($('#vattach'));
+      $('#vstat').onclick = e => { const b = e.target.closest('[data-s]'); if (!b) return; status = status === b.dataset.s ? null : b.dataset.s; $$('#vstat button').forEach(x => x.classList.toggle('on', x.dataset.s === status)); };
+      const setNext = (d, lbl) => { $('#vnext').value = d || ''; $('#vnl').textContent = d ? 'Next: ' + fmt(d) : 'No next follow-up'; $$('#vint .chip').forEach(x => x.classList.toggle('on', x.dataset.i === lbl)); };
+      $('#vint').onclick = e => {
+        const c = e.target.closest('[data-i]'); if (!c) return;
+        const base = $('#vdate').value ? parseIso($('#vdate').value) : today();
+        if (c.dataset.i === 'None') setNext(null, 'None'); else setNext(iso(nextDateFor(c.dataset.i, base)), c.dataset.i);
+      };
+      $('#vnext').onchange = () => setNext($('#vnext').value, null);
+      const ex = $('#vex');
+      if (ex) ex.onclick = async e => { const b = e.target.closest('[data-del]'); if (!b) return; if (await confirmDlg('Remove attachment?', 'This cannot be undone.', 'Remove', true)) { await Repo.delMedia(media.find(x => x.id === +b.dataset.del)); b.parentElement.remove(); } };
+    }
+  };
+};
+
+/* ---------------- all surgeries ---------------- */
+Views.allSurgeries = async () => {
+  const l = await Repo.allSurgeries();
+  return {
+    html: hdr('All Surgeries') + wrapPage(l.length ? l.map(s => '<div class="card tap tile" data-act="open" data-id="' + s.patientId + '"><div class="iconbox">' + ic('scalpel', 22) + '</div><div class="grow"><div class="t-name">' + esc(s.procedure) + '</div><div class="t-sub"><b>' + esc(s.pname) + '</b> &middot; ' + esc(s.uhid) + '</div></div><div class="small">' + fmt(s.date) + '</div></div>').join('') : emptyBox('scalpel', 'No surgeries yet', 'Surgeries you record will be listed here.'))
+  };
+};
+
+/* ---------------- printable summary ---------------- */
+Views.summary = async ({ id }) => {
+  const p = await Repo.patient(id);
+  const [invs, ss, fus, notes] = await Promise.all([Repo.invs(id), Repo.surgeries(id), Repo.fus(id), Repo.notes(id)]);
+  const a = await Auth.acct();
+  const kv = (k, v) => v ? '<div class="kv"><span>' + k + '</span><span>' + esc(v) + '</span></div>' : '';
+  return {
+    html: hdr('Summary', { right: '<button class="ib noprint" data-act="print" aria-label="Print">' + ic('printer', 22) + '</button>' }) + wrapPage(
+      '<div class="card"><h2 style="margin:0 0 4px">' + esc(p.name) + '</h2>' + kv('UHID', p.uhid) + kv('Age / Sex', p.age + ' yrs / ' + p.sex) + kv('Mobile', p.mobile) + kv('Diagnosis', (p.dx || []).map(d => dxLabel(d, p)).join(', ')) + kv('Chief complaints', p.cc) + '</div>' +
+      '<div class="sec"><h2>Investigations</h2></div><div class="card">' + (invs.length ? invs.map(i => kv(fmt(i.date) + ' - ' + i.name, i.notes || 'Done')).join('') : '<span class="small">None recorded</span>') + '</div>' +
+      '<div class="sec"><h2>Surgeries</h2></div>' + (ss.length ? ss.map(s => '<div class="card"><b>' + esc(s.procedure) + '</b> <span class="small">' + fmt(s.date) + '</span>' + kv('Indication', s.indication) + kv('Findings', s.findings) + kv('Operative notes', s.notes) + kv('HPE', s.hpe) + kv('Post-op', s.postop) + '</div>').join('') : '<div class="card small">None recorded</div>') +
+      '<div class="sec"><h2>Follow-up history</h2></div><div class="card">' + (fus.length ? fus.map(f => kv(fmt(f.date) + (f.completed ? '' : ' (scheduled)'), [f.status, f.notes].filter(Boolean).join(' - ') || (f.completed ? 'Visit' : ''))).join('') : '<span class="small">None</span>') + '</div>' +
+      (notes.length ? '<div class="sec"><h2>Notes</h2></div><div class="card">' + notes.map(n => kv(fmt(n.createdAt.slice(0, 10)), n.note)).join('') + '</div>' : '') +
+      '<div class="small" style="text-align:center;margin-top:16px">Generated ' + fmtDT(new Date().toISOString()) + ' &middot; Dr. ' + esc(a.name.replace(/^dr\.?\s*/i, '')) + ' &middot; UroVault</div>'),
+    acts: { print: () => window.print() }
+  };
+};
+
+/* ===================== views: More, settings, backup, boot ===================== */
+
+const mrow = (act, icn, t, s, extra) => '<div class="card mrow" data-act="' + act + '" style="padding:14px 16px">' + '<div class="iconbox">' + ic(icn, 20) + '</div><div class="grow"><div class="t">' + t + '</div>' + (s ? '<div class="s">' + s + '</div>' : '') + '</div>' + (extra || ic('chev', 18)) + '</div>';
+
+Views.more = async () => {
+  const a = await Auth.acct();
+  return {
+    html: hdr('More', { back: false }) + wrapPage(
+      '<div class="card phead" data-act="doctor" style="cursor:pointer"><div class="avatar lg">' + esc(initials(a.name.replace(/^dr\.?\s*/i, ''))) + '</div><div style="flex:1;min-width:0"><div class="t-name" style="font-size:17px">' + esc(a.name) + '</div><div class="t-sub">' + esc(a.id) + '</div></div>' + ic('chev', 18) + '</div>' +
+      '<div style="height:6px"></div>' +
+      mrow('stats', 'bars', 'Statistics', 'Practice overview') + mrow('reports', 'download', 'Reports &amp; Export', 'CSV files, printable lists') +
+      mrow('backup', 'shield', 'Backup &amp; Restore', 'Keep your data safe') + mrow('settings', 'sliders', 'Settings', 'Lock, sample data, storage') +
+      mrow('privacy', 'lock', 'Privacy &amp; Security', 'How your data is handled') + mrow('help', 'help', 'Help &amp; About', 'Version ' + APP_VERSION) +
+      '<div style="height:8px"></div><button class="btn o" data-act="lock">' + ic('lock', 18) + ' Lock now</button>', true) + navbar('more'),
+    acts: {
+      doctor: () => go('doctor'), stats: () => go('stats'), reports: () => go('reports'), backup: () => go('backup'),
+      settings: () => go('settings'), privacy: () => go('privacy'), help: () => go('help'), lock: () => lockNow()
+    }
+  };
+};
+
+Views.doctor = async () => {
+  const a = await Auth.acct();
+  return {
+    html: hdr('Doctor Profile') + wrapPage('<div style="text-align:center;margin:10px 0 6px"><div class="avatar lg" style="margin:0 auto;width:74px;height:74px;font-size:24px">' + esc(initials(a.name.replace(/^dr\.?\s*/i, ''))) + '</div></div>' +
+      '<label class="lbl">Full name</label><input class="inp" id="dn" value="' + esc(a.name) + '"><label class="lbl">Login ID</label><input class="inp" value="' + esc(a.id) + '" disabled>' +
+      '<div style="height:18px"></div><button class="btn" data-act="save">Save</button>'),
+    acts: { save: async () => { const n = $('#dn').value.trim(); if (!n) return toast('Name is required'); await Auth.setName(n); toast('Saved'); back(); } }
+  };
+};
+
+Views.stats = async () => {
+  const [c, dx] = await Promise.all([Repo.counts(), Repo.dxStats()]);
+  const max = dx.length ? dx[0][1] : 1;
+  const box = (n, l, i) => '<div class="card" style="margin:0;text-align:center;padding:14px 6px"><div style="color:var(--teal)">' + ic(i, 22) + '</div><div style="font-size:24px;font-weight:700">' + n + '</div><div class="small">' + l + '</div></div>';
+  return {
+    html: hdr('Statistics') + wrapPage('<div class="qa" style="gap:10px">' + box(c.patients, 'Patients', 'users') + box(c.surgeries, 'Surgeries', 'scalpel') + box(c.investigations, 'Investigations', 'flask') + box(c.media, 'Media items', 'image') + box(c.seen, 'Visits recorded', 'clip2') + box(c.due, 'Follow-ups due', 'bell') + '</div>' +
+      '<div class="sec"><h2>Diagnoses</h2></div><div class="card bars">' + (dx.length ? dx.map(d => '<div class="br"><div class="nm">' + esc(d[0]) + '</div><div class="tr"><i style="width:' + Math.round(d[1] / max * 100) + '%"></i></div><b>' + d[1] + '</b></div>').join('') : '<div class="small" style="text-align:center;padding:10px">No diagnoses recorded yet</div>') + '</div>')
+  };
+};
+
+/* ---- reports / CSV ---- */
+async function csvExport(kind) {
+  const ps = await Repo.patients(); const byId = new Map(ps.map(p => [p.id, p]));
+  let rows, name;
+  if (kind === 'patients') {
+    name = 'urovault-patients'; rows = [['UHID', 'Name', 'Age', 'Sex', 'Mobile', 'Chief complaints', 'Diagnosis', 'Registered']];
+    ps.forEach(p => rows.push([p.uhid, p.name, p.age, p.sex, p.mobile || '', p.cc || '', (p.dx || []).map(d => dxLabel(d, p)).join('; '), (p.createdAt || '').slice(0, 10)]));
+  } else if (kind === 'fu') {
+    name = 'urovault-followups'; rows = [['UHID', 'Name', 'Date', 'Type', 'Status', 'Notes', 'Next planned']];
+    (await Repo.allFus()).sort((a, b) => a.date.localeCompare(b.date)).forEach(f => rows.push([f.uhid, f.pname, f.date, f.completed ? 'Visit' : 'Scheduled', f.status || '', f.notes || '', f.nextDate || '']));
+  } else {
+    name = 'urovault-surgeries'; rows = [['UHID', 'Name', 'Date', 'Procedure', 'Indication', 'Findings', 'Operative notes', 'HPE', 'Post-op']];
+    (await Repo.allSurgeries()).forEach(s => rows.push([s.uhid, s.pname, s.date, s.procedure, s.indication || '', s.findings || '', s.notes || '', s.hpe || '', s.postop || '']));
+  }
+  return { blob: new Blob(['﻿' + rows.map(r => r.map(csvCell).join(',')).join('\r\n')], { type: 'text/csv' }), name: name + '-' + iso(today()) + '.csv' };
+}
+Views.reports = async () => ({
+  html: hdr('Reports & Export') + wrapPage('<div class="small" style="margin:2px 2px 10px">CSV files open in Excel, Numbers or Sheets. They contain patient identifiers - share carefully.</div>' +
+    mrow('csv_patients', 'users', 'Patient list (CSV)') + mrow('csv_fu', 'cal', 'Follow-ups (CSV)') + mrow('csv_surg', 'scalpel', 'Surgery log (CSV)') + mrow('printList', 'printer', 'Print patient list', 'Opens the print dialog / save as PDF')),
+  acts: {
+    csv_patients: async () => { const f = await csvExport('patients'); const r = await shareOrSave(f.blob, f.name); if (r === 'downloaded') toast('Saved to downloads'); await Repo.audit('export', 'csv'); },
+    csv_fu: async () => { const f = await csvExport('fu'); const r = await shareOrSave(f.blob, f.name); if (r === 'downloaded') toast('Saved to downloads'); await Repo.audit('export', 'csv'); },
+    csv_surg: async () => { const f = await csvExport('surg'); const r = await shareOrSave(f.blob, f.name); if (r === 'downloaded') toast('Saved to downloads'); await Repo.audit('export', 'csv'); },
+    printList: () => go('printList')
+  }
+});
+Views.printList = async () => {
+  const ps = (await Repo.patients()).sort((a, b) => a.name.localeCompare(b.name));
+  return {
+    html: hdr('Patient List', { right: '<button class="ib noprint" data-act="print">' + ic('printer', 22) + '</button>' }) + wrapPage('<div class="card" style="padding:4px 14px">' + (ps.length ? ps.map(p => '<div class="kv"><span><b style="color:var(--navy)">' + esc(p.name) + '</b><br>' + esc(p.uhid) + ' &middot; ' + p.age + 'y ' + esc(p.sex[0]) + '</span><span>' + esc((p.dx || []).map(d => dxLabel(d, p)).join(', ') || '-') + '</span></div>').join('') : '<div class="small" style="padding:14px;text-align:center">No patients</div>') + '</div><div class="small" style="text-align:center;margin-top:12px">' + ps.length + ' patients &middot; ' + fmt(iso(today())) + '</div>'),
+    acts: { print: () => window.print() }
+  };
+};
+
+/* ---- backup / restore ---- */
+let _bk = null; // prepared backup {blob,name}
+Views.backup = async () => {
+  const [last, c] = await Promise.all([metaGet('lastBackup'), Repo.counts()]);
+  return {
+    html: hdr('Backup & Restore') + wrapPage(
+      '<div class="card"><div class="kv"><span>Patients</span><span>' + c.patients + '</span></div><div class="kv"><span>Media items</span><span>' + c.media + '</span></div><div class="kv"><span>Last backup</span><span>' + (last ? fmtDT(last) : 'Never') + '</span></div></div>' +
+      '<div class="card" style="background:var(--ambert);border-color:#FCD34D;display:flex;gap:10px">' + ic('alert', 20) + '<div class="small" style="color:var(--amberd)"><b>Your data lives only in this browser.</b> If Safari storage is cleared or the app is deleted, it is gone. Back up regularly and keep the file safe (it is not encrypted).</div></div>' +
+      '<div class="sec"><h2>Export backup</h2></div><div id="bkbox"><button class="btn" data-act="prep">' + ic('download', 20) + ' Create backup file</button></div>' +
+      '<div class="sec"><h2>Restore</h2></div><div class="small" style="margin-bottom:8px">Restoring replaces everything currently on this device.</div><button class="btn o" data-act="restore">' + ic('upload', 18) + ' Choose backup file</button>'),
+    acts: {
+      prep: async () => {
+        const b = busy('Preparing backup...');
+        try {
+          const blob = await Repo.buildBackup((k, n) => b.set('Packing images ' + k + ' / ' + n));
+          _bk = { blob, name: 'urovault-backup-' + iso(today()) + '.json' };
+        } catch (e) { b.done(); return alertDlg('Backup failed', e.message); }
+        b.done();
+        $('#bkbox').innerHTML = '<div class="card tap" style="display:flex;gap:10px;align-items:center;background:var(--greent);border-color:#6EE7B7">' + ic('check', 22) + '<div><b>Backup ready</b><div class="small">' + (_bk.blob.size / 1048576).toFixed(1) + ' MB</div></div></div><button class="btn" data-act="saveBk">' + ic('share', 20) + ' Save / Share backup</button>';
+      },
+      saveBk: async () => {
+        if (!_bk) return;
+        const r = await shareOrSave(_bk.blob, _bk.name);
+        if (r !== 'cancelled') { await metaSet('lastBackup', new Date().toISOString()); await Repo.audit('export', 'backup'); toast(r === 'shared' ? 'Backup shared' : 'Backup saved to downloads'); }
+      },
+      restore: async () => {
+        const fs = await pickFiles({ accept: '.json,application/json' }); if (!fs.length) return;
+        if (!await confirmDlg('Replace all data?', 'Everything on this device will be replaced with the backup (' + fs[0].name + ').', 'Restore', true)) return;
+        const b = busy('Restoring...');
+        try { await Repo.restoreBackup(await fs[0].text()); b.done(); toast('Restore complete'); setTab('home'); }
+        catch (e) { b.done(); alertDlg('Restore failed', e.message || 'Invalid file'); }
+      }
+    }
+  };
+};
+
+/* ---- settings ---- */
+Views.settings = async () => {
+  const [lockOn, demo, est, persisted] = await Promise.all([metaGet('lockOn'), Repo.hasDemo(), (navigator.storage && navigator.storage.estimate ? navigator.storage.estimate() : Promise.resolve(null)), (navigator.storage && navigator.storage.persisted ? navigator.storage.persisted() : Promise.resolve(false))]);
+  const on = lockOn !== false;
+  return {
+    html: hdr('Settings') + wrapPage(
+      '<div class="card mrow"><div class="iconbox">' + ic('lock', 20) + '</div><div class="grow"><div class="t">Require password</div><div class="s">Asked on open and after 2 min away</div></div><button class="sw ' + (on ? 'on' : '') + '" data-act="lockTog" aria-label="Toggle"></button></div>' +
+      mrow('chpw', 'edit', 'Change password') +
+      '<div class="sec"><h2>Sample data</h2></div>' + (demo ? mrow('clearDemo', 'trash', 'Remove sample patients', 'Deletes the 4 demo records') : mrow('loadDemo', 'plusc', 'Load sample patients', 'Four fictional patients to explore the app')) +
+      '<div class="sec"><h2>Storage</h2></div><div class="card"><div class="kv"><span>Used</span><span>' + (est ? (est.usage / 1048576).toFixed(1) + ' MB' : 'n/a') + '</span></div><div class="kv"><span>Protected from eviction</span><span>' + (persisted ? 'Yes' : 'Not guaranteed') + '</span></div></div>' +
+      '<div class="sec"><h2>Danger zone</h2></div><button class="btn o" style="color:var(--redd);border-color:var(--red)" data-act="erase">' + ic('trash', 18) + ' Erase all data</button>'),
+    acts: {
+      lockTog: async () => { await metaSet('lockOn', !on); refresh(); },
+      chpw: () => sheet('<h3>Change password</h3><label class="lbl">Current password</label><input class="inp" type="password" id="cp0"><label class="lbl">New password</label><input class="inp" type="password" id="cp1" placeholder="At least 6 characters"><label class="lbl">Confirm new password</label><input class="inp" type="password" id="cp2"><div class="ferr" id="cpe"></div><div style="height:14px"></div><button class="btn" id="cps">Update</button>', (s, close) => {
+        $('#cps', s).onclick = async () => {
+          const a = await Auth.acct(); const e = $('#cpe', s);
+          if (!await Auth.verify(a.id, $('#cp0', s).value)) return e.textContent = 'Current password is incorrect';
+          if ($('#cp1', s).value.length < 6) return e.textContent = 'New password must be at least 6 characters';
+          if ($('#cp1', s).value !== $('#cp2', s).value) return e.textContent = 'Passwords do not match';
+          await withBusy('Updating...', () => Auth.setPassword($('#cp1', s).value)); close(); toast('Password changed');
+        };
+      }),
+      loadDemo: async () => { await withBusy('Loading...', () => Repo.loadDemo()); toast('Sample patients added'); refresh(); },
+      clearDemo: async () => { await withBusy('Removing...', () => Repo.clearDemo()); toast('Sample patients removed'); refresh(); },
+      erase: async () => {
+        if (!await confirmDlg('Erase all data?', 'All patients, images and your account will be permanently deleted from this device. Make sure you have a backup.', 'Continue', true)) return;
+        if (!await confirmDlg('Are you absolutely sure?', 'This cannot be undone.', 'Erase everything', true)) return;
+        await withBusy('Erasing...', () => Repo.eraseAll()); SESSION.unlocked = false; STACK = [{ view: 'onboarding' }]; render();
+      }
+    }
+  };
+};
+
+Views.privacy = async () => {
+  const log = await Repo.auditLog();
+  return {
+    html: hdr('Privacy & Security') + wrapPage(
+      '<div class="card"><div class="kv"><span>Where is data stored?</span><span>On this device only</span></div><div class="kv"><span>Servers / cloud</span><span>None</span></div><div class="kv"><span>Third-party sharing</span><span>None</span></div><div class="kv"><span>Analytics / tracking</span><span>None</span></div><div class="kv"><span>Password</span><span>Salted PBKDF2</span></div></div>' +
+      '<div class="card small" style="color:var(--navy)">Patient records and images never leave your phone unless you export or share a file yourself. The app works fully offline once installed. The lock screen protects access in the app; backup files are <b>not</b> encrypted, so store them somewhere safe.</div>' +
+      '<div class="sec"><h2>Audit log</h2><span class="small">Latest ' + log.length + '</span></div><div class="card" style="padding:4px 14px">' +
+      (log.length ? log.slice(0, 60).map(l => '<div class="kv"><span>' + esc(l.action) + ' &middot; ' + esc(l.entity) + (l.patientId ? ' #' + l.patientId : '') + '</span><span class="small">' + fmtDT(l.ts) + '</span></div>').join('') : '<div class="small" style="padding:14px;text-align:center">No activity yet</div>') + '</div>' +
+      '<div class="small" style="text-align:center;margin-top:8px">The log stores actions and record numbers only - no patient details.</div>')
+  };
+};
+
+Views.help = async () => ({
+  html: hdr('Help & About') + wrapPage(
+    '<div style="text-align:center;margin:8px 0 16px">' + LOGO(false, 72) + '<h2 style="margin:8px 0 2px">UroVault</h2><div class="small">Version ' + APP_VERSION + ' &middot; Your Urology Practice, Organised.</div></div>' +
+    '<div class="card"><b>Install on iPhone</b><div class="small" style="color:var(--navy);margin-top:6px">Open this page in Safari, tap Share, then <b>Add to Home Screen</b>. Open it from the icon afterwards.</div></div>' +
+    '<div class="card"><b>Getting updates</b><div class="small" style="color:var(--navy);margin-top:6px">After a new version is published, fully close the app and reopen it twice. Your data is kept.</div></div>' +
+    '<div class="card"><b>Registering quickly</b><div class="small" style="color:var(--navy);margin-top:6px">Tap the + button, enter UHID, name, age, sex and complaints, then pick the diagnosis with one tap. Everything else can be added later from the patient profile.</div></div>' +
+    '<div class="card"><b>Keep backups</b><div class="small" style="color:var(--navy);margin-top:6px">Browsers can clear site data. Use More &rarr; Backup &amp; Restore at least weekly and keep the file in iCloud Drive or on your computer.</div></div>')
+});
+
+/* ===================== boot ===================== */
+async function start() {
+  try { await dbOpen(); } catch (e) { app.innerHTML = '<div class="auth"><div class="in"><h1>Storage unavailable</h1><p class="sub2">UroVault could not open its local database. Private browsing mode blocks this - open the app in a normal Safari tab or from the Home Screen.</p></div></div>'; return; }
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* ignore */ }
+  STACK = [{ view: 'splash' }]; render();
+  const has = await Auth.has();
+  const lockOn = (await metaGet('lockOn')) !== false;
+  await sleep(1100);
+  if (!has) STACK = [{ view: 'onboarding' }];
+  else if (lockOn) STACK = [{ view: 'login' }];
+  else { SESSION.unlocked = true; STACK = [{ view: 'home' }]; }
+  render();
+  document.addEventListener('visibilitychange', async () => {
+    if (document.hidden) SESSION.hiddenAt = Date.now();
+    else if (SESSION.unlocked && SESSION.hiddenAt && Date.now() - SESSION.hiddenAt > 120000 && (await metaGet('lockOn')) !== false) lockNow();
+  });
+}
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { /* offline support is optional */ }); });
+}
+start();
+
+</script>
+</body>
+</html>

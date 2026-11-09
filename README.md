@@ -46,3 +46,13 @@ flutter run                         # or: flutter build apk --release
 - Patient filter groups: Renal = Renal Mass, Renal Stone, Ureteric Stone, Ureterocele, PUJO; Bladder = Ca Bladder; Prostate = Prostate CA; Other = Adrenal Mass, Other and undiagnosed. Edit `lib/core/constants.dart` to change.
 - A patient has one active "next follow-up"; saving a new visit replaces any pending one.
 - Reference mockups used for design: `assets/reference/`.
+
+## iPhone / PWA version
+
+A installable web-app build lives in `docs/` (served by GitHub Pages) with sources in `pwa/src` and `pwa/build.py`.
+
+1. GitHub repo → Settings → Pages → Branch `main`, folder `/docs`.
+2. Open `https://<user>.github.io/urovault/` in Safari → Share → **Add to Home Screen**.
+3. Rebuild after editing sources: `python3 pwa/build.py` (bump `CACHE` in `docs/sw.js` for updates).
+
+Data is stored on-device (IndexedDB). Use More → Backup & Restore regularly.
