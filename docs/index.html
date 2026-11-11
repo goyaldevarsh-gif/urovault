@@ -231,8 +231,8 @@ input[type=date].inp{min-height:50px;display:block;text-align:left;-webkit-min-l
 <script>
 'use strict';
 /* ===================== UroVault PWA - core: utils, icons, db, repo ===================== */
-const APP_VERSION = '1.5.0';
-const BUILD_ID = '20261111075935';
+const APP_VERSION = '1.5.1';
+const BUILD_ID = '20261111081606';
 const COPYRIGHT = '&copy; 2026 Dr. Devarsh Goyal. All rights reserved.';
 const copyFoot = () => '<div class="small" style="text-align:center;margin:22px 0 4px;opacity:.85">' + COPYRIGHT + '<br>UroVault v' + APP_VERSION + '</div>';
 
@@ -830,7 +830,8 @@ function syLoops() {
 
 /* ---- connect / disconnect ---- */
 async function syConnect(f) {
-  const url = f.url.trim().replace(/\/+$/, ''), cfg = { url, anon: f.anon.trim(), email: f.email.trim(), dev: crypto.randomUUID(), on: false, cursor: null };
+  let url = f.url.trim(); try { url = new URL(url).origin; } catch (e) { throw new Error('Project URL is not valid'); }
+  const cfg = { url, anon: f.anon.trim(), email: f.email.trim(), dev: crypto.randomUUID(), on: false, cursor: null };
   SY.cfg = cfg;
   const H = { apikey: cfg.anon, 'content-type': 'application/json' }, body = JSON.stringify({ email: cfg.email, password: f.pw });
   let r = await syRaw(url + '/auth/v1/token?grant_type=password', { method: 'POST', headers: H, body }), j = await r.json();

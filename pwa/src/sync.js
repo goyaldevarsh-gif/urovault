@@ -130,7 +130,8 @@ function syLoops() {
 
 /* ---- connect / disconnect ---- */
 async function syConnect(f) {
-  const url = f.url.trim().replace(/\/+$/, ''), cfg = { url, anon: f.anon.trim(), email: f.email.trim(), dev: crypto.randomUUID(), on: false, cursor: null };
+  let url = f.url.trim(); try { url = new URL(url).origin; } catch (e) { throw new Error('Project URL is not valid'); }
+  const cfg = { url, anon: f.anon.trim(), email: f.email.trim(), dev: crypto.randomUUID(), on: false, cursor: null };
   SY.cfg = cfg;
   const H = { apikey: cfg.anon, 'content-type': 'application/json' }, body = JSON.stringify({ email: cfg.email, password: f.pw });
   let r = await syRaw(url + '/auth/v1/token?grant_type=password', { method: 'POST', headers: H, body }), j = await r.json();
