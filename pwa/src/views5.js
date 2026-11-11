@@ -347,3 +347,17 @@ Views.guide = async ({ pid, kind }) => {
   };
 };
 ACT.openGuide = el => go('guide', { pid: +el.dataset.pid, kind: el.dataset.k });
+
+/* AI connection test + model list (Settings) */
+async function aiTest(prov, key, model) {
+  const t0 = Date.now();
+  if (prov === 'gemini') {
+    const r = await aiFetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=100', { headers: { 'x-goog-api-key': key } });
+    const j = await r.json();
+    if (!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status));
+    const names = (j.models || []).filter(m => (m.supportedGenerationMethods || []).includes('generateContent')).map(m => m.name.replace('models/', '')).filter(n => /^gemini/.test(n));
+    return { ms: Date.now() - t0, models: names };
+  }
+  const out = await aiReview('Reply with the single word OK.', key, model, prov);
+  return { ms: Date.now() - t0, models: [], note: out.slice(0, 40) };
+}
