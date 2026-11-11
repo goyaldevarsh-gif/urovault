@@ -342,7 +342,7 @@ Views.guide = async ({ pid, kind }) => {
       }
     },
     bind: root => {
-      root.oninput = e => { const n = e.target.dataset && e.target.dataset.n; if (!n || !$('#ga')) return; if (e.target.value.trim() === '') delete a[n]; else a[n] = e.target.value.trim(); $('#ga').innerHTML = result(); save(); };
+      root.oninput = e => { const n = e.target.dataset && e.target.dataset.n; if (!n || !$('#ga')) return; const cl = e.target.value.replace(/[^0-9.]/g, ''); if (cl !== e.target.value) e.target.value = cl; if (cl === '') delete a[n]; else a[n] = cl; $('#ga').innerHTML = result(); save(); };
     }
   };
 };

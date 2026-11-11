@@ -1,6 +1,6 @@
 'use strict';
 /* ===================== UroVault PWA - core: utils, icons, db, repo ===================== */
-const APP_VERSION = '1.7.0';
+const APP_VERSION = '1.7.1';
 const BUILD_ID = '__BUILD__';
 const COPYRIGHT = '&copy; 2026 Dr. Devarsh Goyal. All rights reserved.';
 const copyFoot = () => '<div class="small" style="text-align:center;margin:22px 0 4px;opacity:.85">' + COPYRIGHT + '<br>UroVault v' + APP_VERSION + '</div>';
@@ -399,13 +399,14 @@ const Repo = {
   async restoreBackup(text) {
     const j = JSON.parse(text);
     if (j.app !== 'UroVault' || !j.patients) throw new Error('This file is not a UroVault backup');
+    if (typeof SY !== 'undefined' && SY.cfg && SY.cfg.on) { for (const n of ['patients', 'investigations', 'surgeries', 'followups', 'notes', 'media', 'blobs']) for (const r of await dbAll(n)) SY.q[n + ':' + r.id] = { op: 'del', mt: Date.now() }; await metaSet('syncq', SY.q); }
     for (const n of ['patients', 'investigations', 'surgeries', 'followups', 'notes', 'media', 'blobs', 'audit']) await dbClear(n);
     _urls.forEach(u => URL.revokeObjectURL(u)); _urls.clear();
     for (const n of ['patients', 'investigations', 'surgeries', 'followups', 'notes', 'media', 'audit']) for (const r of (j[n] || [])) await dbPut(n, r);
     for (const b of (j.blobs || [])) await dbPut('blobs', { id: b.id, blob: b64ToBlob(b.data, b.type) });
     await Repo.audit('restore', 'backup');
   },
-  async eraseAll() { for (const n of STORES) await dbClear(n); _urls.clear(); }
+  async eraseAll() { if (typeof SY !== 'undefined') { SY.cfg = null; SY.key = null; SY.q = {}; clearTimeout(SY.timer); } for (const n of STORES) await dbClear(n); _urls.clear(); }
 };
 
 

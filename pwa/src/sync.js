@@ -174,8 +174,8 @@ const SY_SQL = "create table if not exists public.records (\n  user_id uuid not 
 async function syDerive(id, pw) {
   const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
   const bits = async lbl => new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: new TextEncoder().encode('urovault-' + lbl + '-v1:' + id), iterations: 150000, hash: 'SHA-256' }, km, 256));
-  const clean = id.trim().toLowerCase().replace(/\s+/g, '.');
-  return { email: clean.includes('@') ? clean : clean + '@urovault.app', cloudPw: b64e(await bits('cloud')), pass: b64e(await bits('enc')) };
+  const h = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('urovault-cloud-id-v2:' + id.trim().toLowerCase())));
+  return { email: 'u' + Array.from(h.slice(0, 12)).map(x => x.toString(16).padStart(2, '0')).join('') + '@urovault.app', cloudPw: b64e(await bits('cloud')), pass: b64e(await bits('enc')) };
 }
 
 /* Re-key cloud data to a new password. oldCpw = cloud password derived from the old password (stored on this device). */

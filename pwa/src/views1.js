@@ -104,7 +104,7 @@ Views.home = async () => {
   const recent = ps.slice().sort((x, y) => (y.updatedAt || '').localeCompare(x.updatedAt || '')).slice(0, 5);
   const first = a.name.replace(/^dr\.?\s*/i, '').split(' ')[0];
   const bkDays = lastBk ? Math.round((Date.now() - new Date(lastBk)) / 86400000) : null;
-  const needBk = ps.length > 0 && (bkDays === null || bkDays >= 7);
+  const needBk = ps.length > 0 && (bkDays === null || bkDays >= 7) && !(SY.cfg && SY.cfg.on && !SY.err);
   const stat = (act, icn, n, l) => '<button class="stat" data-act="' + act + '">' + ic(icn, 20) + '<div class="n">' + n + '</div><div class="l">' + l + '</div></button>';
   return {
     html: '<div class="dhead"><div class="in"><div class="top"><div class="brand">' + LOGO(true, 38) + '<div><div class="bn">UroVault</div><div class="bt">Your Urology Practice, Organised.</div></div></div>' +

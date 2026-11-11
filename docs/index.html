@@ -231,8 +231,8 @@ input[type=date].inp{min-height:50px;display:block;text-align:left;-webkit-min-l
 <script>
 'use strict';
 /* ===================== UroVault PWA - core: utils, icons, db, repo ===================== */
-const APP_VERSION = '1.7.0';
-const BUILD_ID = '20261111083653';
+const APP_VERSION = '1.7.1';
+const BUILD_ID = '20261111084131';
 const COPYRIGHT = '&copy; 2026 Dr. Devarsh Goyal. All rights reserved.';
 const copyFoot = () => '<div class="small" style="text-align:center;margin:22px 0 4px;opacity:.85">' + COPYRIGHT + '<br>UroVault v' + APP_VERSION + '</div>';
 
@@ -630,13 +630,14 @@ const Repo = {
   async restoreBackup(text) {
     const j = JSON.parse(text);
     if (j.app !== 'UroVault' || !j.patients) throw new Error('This file is not a UroVault backup');
+    if (typeof SY !== 'undefined' && SY.cfg && SY.cfg.on) { for (const n of ['patients', 'investigations', 'surgeries', 'followups', 'notes', 'media', 'blobs']) for (const r of await dbAll(n)) SY.q[n + ':' + r.id] = { op: 'del', mt: Date.now() }; await metaSet('syncq', SY.q); }
     for (const n of ['patients', 'investigations', 'surgeries', 'followups', 'notes', 'media', 'blobs', 'audit']) await dbClear(n);
     _urls.forEach(u => URL.revokeObjectURL(u)); _urls.clear();
     for (const n of ['patients', 'investigations', 'surgeries', 'followups', 'notes', 'media', 'audit']) for (const r of (j[n] || [])) await dbPut(n, r);
     for (const b of (j.blobs || [])) await dbPut('blobs', { id: b.id, blob: b64ToBlob(b.data, b.type) });
     await Repo.audit('restore', 'backup');
   },
-  async eraseAll() { for (const n of STORES) await dbClear(n); _urls.clear(); }
+  async eraseAll() { if (typeof SY !== 'undefined') { SY.cfg = null; SY.key = null; SY.q = {}; clearTimeout(SY.timer); } for (const n of STORES) await dbClear(n); _urls.clear(); }
 };
 
 
@@ -881,8 +882,8 @@ const SY_SQL = "create table if not exists public.records (\n  user_id uuid not 
 async function syDerive(id, pw) {
   const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
   const bits = async lbl => new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: new TextEncoder().encode('urovault-' + lbl + '-v1:' + id), iterations: 150000, hash: 'SHA-256' }, km, 256));
-  const clean = id.trim().toLowerCase().replace(/\s+/g, '.');
-  return { email: clean.includes('@') ? clean : clean + '@urovault.app', cloudPw: b64e(await bits('cloud')), pass: b64e(await bits('enc')) };
+  const h = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('urovault-cloud-id-v2:' + id.trim().toLowerCase())));
+  return { email: 'u' + Array.from(h.slice(0, 12)).map(x => x.toString(16).padStart(2, '0')).join('') + '@urovault.app', cloudPw: b64e(await bits('cloud')), pass: b64e(await bits('enc')) };
 }
 
 /* Re-key cloud data to a new password. oldCpw = cloud password derived from the old password (stored on this device). */
@@ -1298,7 +1299,7 @@ Views.home = async () => {
   const recent = ps.slice().sort((x, y) => (y.updatedAt || '').localeCompare(x.updatedAt || '')).slice(0, 5);
   const first = a.name.replace(/^dr\.?\s*/i, '').split(' ')[0];
   const bkDays = lastBk ? Math.round((Date.now() - new Date(lastBk)) / 86400000) : null;
-  const needBk = ps.length > 0 && (bkDays === null || bkDays >= 7);
+  const needBk = ps.length > 0 && (bkDays === null || bkDays >= 7) && !(SY.cfg && SY.cfg.on && !SY.err);
   const stat = (act, icn, n, l) => '<button class="stat" data-act="' + act + '">' + ic(icn, 20) + '<div class="n">' + n + '</div><div class="l">' + l + '</div></button>';
   return {
     html: '<div class="dhead"><div class="in"><div class="top"><div class="brand">' + LOGO(true, 38) + '<div><div class="bn">UroVault</div><div class="bt">Your Urology Practice, Organised.</div></div></div>' +
@@ -1915,7 +1916,7 @@ Views.backup = async () => {
   return {
     html: hdr('Backup & Restore') + wrapPage(
       '<div class="card"><div class="kv"><span>Patients</span><span>' + c.patients + '</span></div><div class="kv"><span>Media items</span><span>' + c.media + '</span></div><div class="kv"><span>Last backup</span><span>' + (last ? fmtDT(last) : 'Never') + '</span></div></div>' +
-      '<div class="card" style="background:var(--ambert);border-color:#FCD34D;display:flex;gap:10px">' + ic('alert', 20) + '<div class="small" style="color:var(--amberd)"><b>Your data lives only in this browser.</b> If Safari storage is cleared or the app is deleted, it is gone. Back up regularly and keep the file safe (it is not encrypted).</div></div>' +
+      ((SY.cfg && SY.cfg.on) ? '<div class="card" style="background:var(--greent);border-color:#6EE7B7;display:flex;gap:10px">' + ic('check', 20) + '<div class="small" style="color:var(--greend)"><b>Cloud sync is on.</b> Your data is also saved encrypted in the cloud. A backup file is an extra safety copy, encrypted with your password.</div></div>' : '<div class="card" style="background:var(--ambert);border-color:#FCD34D;display:flex;gap:10px">' + ic('alert', 20) + '<div class="small" style="color:var(--amberd)"><b>Your data lives only on this phone.</b> If Safari storage is cleared or the app is deleted, it is gone. Turn on cloud sync in Settings, or back up regularly. Backup files are encrypted with your password.</div></div>') +
       '<div class="sec"><h2>Export backup</h2></div><div id="bkbox"><button class="btn" data-act="prep">' + ic('download', 20) + ' Create backup file</button></div>' +
       '<div class="sec"><h2>Restore</h2></div><div class="small" style="margin-bottom:8px">Restoring replaces everything currently on this device.</div><button class="btn o" data-act="restore">' + ic('upload', 18) + ' Choose backup file</button>'),
     acts: {
@@ -2007,6 +2008,7 @@ Views.settings = async () => {
       aiPick: async el => { $('#aim').value = el.dataset.m; await metaSet('aiKey', $('#aik').value.trim()); await metaSet('aiModel', el.dataset.m); toast('Model set: ' + el.dataset.m); },
       aiSave: async () => { await metaSet('aiKey', $('#aik').value.trim()); await metaSet('aiModel', $('#aim').value.trim()); toast('Saved'); },
       updCheck: async () => { await checkUpdate(false); applyUpdate(); },
+      backup: () => go('backup'),
       chName: () => sheet('<h3>Edit name</h3><label class="lbl">Full name</label><input class="inp" id="en1" value="' + esc(acc.name) + '"><div style="height:12px"></div><button class="btn" id="en2">Save</button>', (s, close) => { $('#en2', s).onclick = async () => { const v = $('#en1', s).value.trim(); if (!v) return; await Auth.setName(v); close(); toast('Name updated'); refresh(); }; }),
       viewRc: async () => { const pw = await askPw('Show recovery code', 'Enter your password to view it.', false); if (pw === null) return; if (!await Auth.verify(acc.id, pw)) return alertDlg('Incorrect password', 'Try again.'); go('recovery'); },
       logout: async () => { if (!await confirmDlg('Log out?', 'You will need your password to open UroVault again. Your data and cloud sync stay as they are.', 'Log out')) return; lockNow(); },
@@ -2038,8 +2040,8 @@ Views.privacy = async () => {
   const log = await Repo.auditLog();
   return {
     html: hdr('Privacy & Security') + wrapPage(
-      '<div class="card"><div class="kv"><span>Where is data stored?</span><span>On this device only</span></div><div class="kv"><span>Servers / cloud</span><span>None</span></div><div class="kv"><span>Third-party sharing</span><span>None</span></div><div class="kv"><span>Analytics / tracking</span><span>None</span></div><div class="kv"><span>Password</span><span>Salted PBKDF2</span></div></div>' +
-      '<div class="card small" style="color:var(--navy)">Patient records and images never leave your phone unless you export or share a file yourself. The app works fully offline once installed. The lock screen protects access in the app; backup files are <b>not</b> encrypted, so store them somewhere safe.</div>' +
+      '<div class="card"><div class="kv"><span>Where is data stored?</span><span>On this device</span></div><div class="kv"><span>Cloud sync</span><span>' + (SY.cfg && SY.cfg.on ? 'On (encrypted)' : 'Off') + '</span></div><div class="kv"><span>AI review</span><span>Off unless you use it</span></div><div class="kv"><span>Analytics / tracking</span><span>None</span></div><div class="kv"><span>Password</span><span>Salted PBKDF2</span></div></div>' +
+      '<div class="card small" style="color:var(--navy);line-height:1.55">Records and images are kept on this phone. The lock screen controls access inside the app; the on-device database itself is not encrypted, so use your phone passcode. <b>Cloud sync</b> (optional) encrypts everything on the phone with a key made from your password before upload, so the server only holds unreadable data. <b>Backup files</b> are encrypted with your password. <b>AI review</b> (optional, your own API key) sends only the answers you entered, with no name, UHID, mobile or exact age, after you preview and approve the text. Nothing else leaves the phone unless you export or share a file yourself.</div>' +
       '<div class="sec"><h2>Audit log</h2><span class="small">Latest ' + log.length + '</span></div><div class="card" style="padding:4px 14px">' +
       (log.length ? log.slice(0, 60).map(l => '<div class="kv"><span>' + esc(l.action) + ' &middot; ' + esc(l.entity) + (l.patientId ? ' #' + l.patientId : '') + '</span><span class="small">' + fmtDT(l.ts) + '</span></div>').join('') : '<div class="small" style="padding:14px;text-align:center">No activity yet</div>') + '</div>' +
       '<div class="small" style="text-align:center;margin-top:8px">The log stores actions and record numbers only - no patient details.</div>')
@@ -2569,7 +2571,7 @@ Views.guide = async ({ pid, kind }) => {
       }
     },
     bind: root => {
-      root.oninput = e => { const n = e.target.dataset && e.target.dataset.n; if (!n || !$('#ga')) return; if (e.target.value.trim() === '') delete a[n]; else a[n] = e.target.value.trim(); $('#ga').innerHTML = result(); save(); };
+      root.oninput = e => { const n = e.target.dataset && e.target.dataset.n; if (!n || !$('#ga')) return; const cl = e.target.value.replace(/[^0-9.]/g, ''); if (cl !== e.target.value) e.target.value = cl; if (cl === '') delete a[n]; else a[n] = cl; $('#ga').innerHTML = result(); save(); };
     }
   };
 };
