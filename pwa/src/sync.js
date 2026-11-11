@@ -2,6 +2,7 @@
 /* ===================== Cloud sync (Supabase, end-to-end encrypted) =====================
    Everything is encrypted on this device with your sync passphrase (AES-256-GCM) before upload.
    The server only ever stores ciphertext. Last write wins per record. */
+const SY_URL = 'https://uyxsmsizvshlbynyrnuu.supabase.co', SY_KEY = 'sb_publishable_GGvo2WmhgWI5Zo_dvdpZnQ_NIvrlj6F';
 const SY = { cfg: null, key: null, q: {}, busy: false, applying: false, timer: null, err: '' };
 const SY_STORES = ['patients', 'investigations', 'surgeries', 'followups', 'notes', 'media'];
 const b64e = u => { let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
