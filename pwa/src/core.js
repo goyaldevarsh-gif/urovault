@@ -1,6 +1,6 @@
 'use strict';
 /* ===================== UroVault PWA - core: utils, icons, db, repo ===================== */
-const APP_VERSION = '1.1.1';
+const APP_VERSION = '1.2.0';
 const BUILD_ID = '__BUILD__';
 const COPYRIGHT = '&copy; 2026 Dr. Devarsh Goyal. All rights reserved.';
 const copyFoot = () => '<div class="small" style="text-align:center;margin:22px 0 4px;opacity:.85">' + COPYRIGHT + '<br>UroVault v' + APP_VERSION + '</div>';
@@ -239,6 +239,7 @@ const Repo = {
     await Repo.audit(p.id ? 'update' : 'create', 'patient', id, id);
     return id;
   },
+  async setClin(pid, kind, a, badge) { const p = await dbGet('patients', pid); if (!p) return; p.clin = p.clin || {}; p.clin[kind] = { a: Object.assign({}, a), badge: badge || '', at: new Date().toISOString() }; p.updatedAt = new Date().toISOString(); await dbPut('patients', p); },
   async touch(pid) { const p = await dbGet('patients', pid); if (p) { p.updatedAt = new Date().toISOString(); await dbPut('patients', p); } },
   async setDx(pid, dx, addDx) {
     const p = await dbGet('patients', pid);

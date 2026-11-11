@@ -270,7 +270,7 @@ Views.guide = async ({ pid, kind }) => {
   const form = () => visible().map(f => {
     if (f.t === 'n') return '<label class="lbl">' + esc(f.l) + '</label><input class="inp" inputmode="decimal" data-n="' + f.id + '" value="' + esc(a[f.id] == null ? '' : a[f.id]) + '">';
     const opts = typeof f.o === 'function' ? f.o(a) : f.o;
-    return '<label class="lbl">' + esc(f.l) + '</label><div class="chips wrapchips">' + opts.map(o => '<button type="button" class="chip sm ' + (a[f.id] === o ? 'on' : '') + '" data-f="' + f.id + '" data-v="' + esc(o) + '">' + esc(o) + '</button>').join('') + '</div>';
+    return '<label class="lbl">' + esc(f.l) + '</label><div class="chips wrapchips">' + opts.map(o => '<button type="button" data-act="gp" class="chip sm ' + (a[f.id] === o ? 'on' : '') + '" data-f="' + f.id + '" data-v="' + esc(o) + '">' + esc(o) + '</button>').join('') + '</div>';
   }).join('');
   const clean = () => { const keep = new Set(visible().map(f => f.id)); Object.keys(a).forEach(k => { if (!keep.has(k)) delete a[k]; }); };
   const result = () => {
@@ -286,15 +286,16 @@ Views.guide = async ({ pid, kind }) => {
       '<div class="banner" style="margin-top:12px">' + ic('shield', 16) + ' On-device only. Nothing is sent anywhere.</div>' +
       '<div id="gq">' + form() + '</div><div style="height:6px"></div><div id="ga">' + result() + '</div>' +
       '<div class="small" style="margin-top:18px;line-height:1.5">' + esc(EAU_VER) + '. Recommendations are paraphrased from the guidelines for decision support. They do not replace clinical judgement or the full guideline text - verify before acting. Answers are saved to this patient automatically.</div>'),
-    bind: root => {
-      root.addEventListener('click', e => {
-        const b = e.target.closest('[data-f]'); if (!b) return;
-        const id = b.dataset.f, v = b.dataset.v;
+    acts: {
+      gp: el => {
+        const id = el.dataset.f, v = el.dataset.v;
         if (a[id] === v) delete a[id]; else a[id] = v;
         if (id === 'sys') delete a.grade;
         clean(); $('#gq').innerHTML = form(); $('#ga').innerHTML = result(); save();
-      });
-      root.addEventListener('input', e => { const n = e.target.dataset.n; if (!n) return; if (e.target.value.trim() === '') delete a[n]; else a[n] = e.target.value.trim(); $('#ga').innerHTML = result(); save(); });
+      }
+    },
+    bind: root => {
+      root.oninput = e => { const n = e.target.dataset && e.target.dataset.n; if (!n || !$('#ga')) return; if (e.target.value.trim() === '') delete a[n]; else a[n] = e.target.value.trim(); $('#ga').innerHTML = result(); save(); };
     }
   };
 };

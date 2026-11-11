@@ -1,6 +1,6 @@
 /* UroVault service worker: offline-first, stale-while-revalidate for same-origin files.
    Bump CACHE on every release so installed copies refresh (close and reopen the app twice). */
-const CACHE = 'urovault-20261111072051';
+const CACHE = 'urovault-20261111072155';
 const ASSETS = [
   './', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',

@@ -59,7 +59,7 @@ async function caseSeriesBook(patients, anon) {
   const idv = (p, i) => anon ? ['C' + String(i + 1).padStart(2, '0')] : ['C' + String(i + 1).padStart(2, '0'), p.uhid, p.name];
   const idw = anon ? [9] : [9, 16, 22];
   const stdInv = INV_OPTIONS.filter(n => n !== 'Other');
-  const main = [idCols.concat(['Age', 'Sex'], anon ? [] : ['Mobile'], ['Registered on', 'Chief complaints', 'Diagnosis', 'Laterality', 'Clinical notes'], stdInv, ['Other investigations', 'No. of surgeries', 'Name of surgery', 'Date of surgery', 'Duration (min)', 'Assistant 1', 'Assistant 2', 'Assistant 3', 'Indication', 'Operative findings', 'Operative notes', 'HPE', 'Post-op notes', 'No. of visits', 'Last visit date', 'Last status', 'Last visit notes', 'Next follow-up due', 'Follow-up course', 'Media items'])];
+  const main = [idCols.concat(['Age', 'Sex'], anon ? [] : ['Mobile'], ['Registered on', 'Chief complaints', 'Diagnosis', 'Laterality', 'Clinical notes'], stdInv, ['Other investigations', 'No. of surgeries', 'Name of surgery', 'Date of surgery', 'Duration (min)', 'Assistant 1', 'Assistant 2', 'Assistant 3', 'Indication', 'Operative findings', 'Operative notes', 'HPE', 'Post-op notes', 'No. of visits', 'Last visit date', 'Last status', 'Last visit notes', 'Next follow-up due', 'Follow-up course', 'Media items', 'EAU assessment', 'EAU inputs'])];
   const fuS = [idCols.concat(['Date', 'Type', 'Status', 'Notes', 'Next planned'])];
   const suS = [idCols.concat(['Date of surgery', 'Name of surgery', 'Duration (min)', 'Assistant 1', 'Assistant 2', 'Assistant 3', 'Indication', 'Operative findings', 'Operative notes', 'HPE', 'Post-op notes'])];
   const ivS = [idCols.concat(['Investigation', 'Date', 'Result / notes'])];
@@ -78,13 +78,13 @@ async function caseSeriesBook(patients, anon) {
         multi ? j(sus, (s, n) => (n + 1) + ') ' + s.procedure) : (sus[0] ? sus[0].procedure : ''), multi ? j(sus, (s, n) => (n + 1) + ') ' + dfx(s.date)) : (sus[0] ? dfx(sus[0].date) : ''),
         multi ? j(sus, (s, n) => (n + 1) + ') ' + (s.duration || '-')) : (sus[0] && sus[0].duration ? sus[0].duration : ''), one('assist1'), one('assist2'), one('assist3'), one('indication'), one('findings'), one('notes'), one('hpe'), one('postop'),
         visits.length, last ? dfx(last.date) : '', last ? last.status || 'Not recorded' : '', last ? last.notes || '' : '', pend ? dfx(pend.date) : '',
-        j(visits, f => dfx(f.date) + ' - ' + (f.status || 'status n/r') + (f.notes ? ' - ' + f.notes : '')), by(medAll, p.id).length]));
+        j(visits, f => dfx(f.date) + ' - ' + (f.status || 'status n/r') + (f.notes ? ' - ' + f.notes : '')), by(medAll, p.id).length, guideKinds(p).map(k => guideSummary(p, k).risk).filter(Boolean).join(' | '), guideKinds(p).map(k => guideSummary(p, k).inputs).filter(Boolean).join(' | ')]));
     visits.concat(pend ? [pend] : []).forEach(f => fuS.push(id.concat([dfx(f.date), f.completed ? 'Visit' : 'Scheduled', f.status || '', f.notes || '', f.nextDate ? dfx(f.nextDate) : ''])));
     sus.forEach(s => suS.push(id.concat([dfx(s.date), s.procedure, s.duration || '', s.assist1 || '', s.assist2 || '', s.assist3 || '', s.indication || '', s.findings || '', s.notes || '', s.hpe || '', s.postop || ''])));
     invs.forEach(x => ivS.push(id.concat([x.name, dfx(x.date), x.notes || ''])));
   });
   const lead = main[0].length;
-  const mw = idw.concat([7, 9], anon ? [] : [14], [13, 34, 26, 16, 34], stdInv.map(() => 26), [30, 11, 24, 16, 13, 16, 16, 16, 28, 30, 34, 28, 28, 10, 14, 13, 32, 15, 44, 9]);
+  const mw = idw.concat([7, 9], anon ? [] : [14], [13, 34, 26, 16, 34], stdInv.map(() => 26), [30, 11, 24, 16, 13, 16, 16, 16, 28, 30, 34, 28, 28, 10, 14, 13, 32, 15, 44, 9, 28, 60]);
   return buildXlsx([
     { name: 'Case Series', rows: main, widths: mw }, { name: 'Surgeries', rows: suS, widths: idw.concat([14, 24, 13, 16, 16, 16, 28, 30, 34, 28, 28]) },
     { name: 'Follow-ups', rows: fuS, widths: idw.concat([14, 11, 13, 40, 14]) }, { name: 'Investigations', rows: ivS, widths: idw.concat([20, 14, 44]) }
