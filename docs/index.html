@@ -231,8 +231,8 @@ input[type=date].inp{min-height:50px;display:block;text-align:left;-webkit-min-l
 <script>
 'use strict';
 /* ===================== UroVault PWA - core: utils, icons, db, repo ===================== */
-const APP_VERSION = '1.5.1';
-const BUILD_ID = '20261111081606';
+const APP_VERSION = '1.5.2';
+const BUILD_ID = '20261111082000';
 const COPYRIGHT = '&copy; 2026 Dr. Devarsh Goyal. All rights reserved.';
 const copyFoot = () => '<div class="small" style="text-align:center;margin:22px 0 4px;opacity:.85">' + COPYRIGHT + '<br>UroVault v' + APP_VERSION + '</div>';
 
@@ -1918,7 +1918,12 @@ Views.settings = async () => {
       syOn: () => sheet('<h3>Cloud sync setup</h3><label class="lbl">Supabase project URL</label><input class="inp" id="sy1" placeholder="https://xxxx.supabase.co" autocapitalize="off" autocorrect="off"><label class="lbl">Supabase anon (public) key</label><input class="inp" id="sy2" autocapitalize="off" autocorrect="off"><label class="lbl">Cloud account email</label><input class="inp" id="sy3" type="email" autocapitalize="off"><label class="lbl">Cloud account password</label><input class="inp" id="sy4" type="password"><label class="lbl">Sync passphrase (encrypts your data)</label><input class="inp" id="sy5" type="password" placeholder="At least 8 characters"><div class="small" style="margin-top:6px"><b>Do not lose the sync passphrase.</b> Without it nobody can decrypt the cloud copy. On a new phone you enter the same details.</div><div class="ferr" id="sye"></div><div style="height:12px"></div><button class="btn" id="syg">Connect</button>', (s, close) => {
         $('#syg', s).onclick = async () => {
           const f = { url: $('#sy1', s).value, anon: $('#sy2', s).value, email: $('#sy3', s).value, pw: $('#sy4', s).value, pass: $('#sy5', s).value }, e = $('#sye', s);
-          if (!/^https:\/\//.test(f.url) || !f.anon.trim() || !f.email.trim() || f.pw.length < 6) return e.textContent = 'Fill URL, key, email and a password (6+ chars)';
+          f.url = f.url.trim().replace(/\s+/g, ''); if (f.url && !/^https?:\/\//i.test(f.url)) f.url = 'https://' + f.url;
+          f.anon = f.anon.replace(/\s+/g, ''); f.email = f.email.trim();
+          if (!/^https:\/\/.+\..+/i.test(f.url)) return e.textContent = 'Project URL looks wrong or empty';
+          if (f.anon.length < 20) return e.textContent = 'API key looks wrong or empty';
+          if (!/.+@.+\..+/.test(f.email)) return e.textContent = 'Email looks wrong or empty';
+          if (f.pw.length < 6) return e.textContent = 'Cloud password needs 6+ characters (' + f.pw.length + ' entered)';
           if (f.pass.length < 8) return e.textContent = 'Sync passphrase needs 8+ characters';
           let st;
           try { st = await withBusy('Connecting...', () => syConnect(f)); } catch (x) { SY.cfg = null; SY.key = null; return e.textContent = x.message || 'Failed'; }
