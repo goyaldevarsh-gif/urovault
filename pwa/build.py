@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Builds docs/index.html (single file) from pwa/src."""
-import pathlib, re
+import pathlib, re, json, datetime
 root = pathlib.Path(__file__).parent
 src = root / 'src'
 css = (src / 'style.css').read_text()
 css = re.sub(r'/\*.*?\*/', '', css, flags=re.S)
 css = re.sub(r'\n\s*\n+', '\n', css)
 js = '\n'.join((src / f).read_text() for f in ['core.js', 'ui.js', 'views1.js', 'views2.js', 'views3.js'])
+build = datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
+js = js.replace('__BUILD__', build)
 js = js.replace("'use strict';\n", '')
 js = "'use strict';\n" + js
 html = f'''<!DOCTYPE html>
@@ -44,3 +46,9 @@ html = f'''<!DOCTYPE html>
 out = root.parent / 'docs' / 'index.html'
 out.write_text(html)
 print('wrote', out, len(html)//1024, 'KB')
+
+ver = re.search(r"APP_VERSION = '([^']+)'", js).group(1)
+(root.parent / 'docs' / 'version.json').write_text(json.dumps({'build': build, 'version': ver}))
+sw = root.parent / 'docs' / 'sw.js'
+sw.write_text(re.sub(r"const CACHE = '[^']*';", f"const CACHE = 'urovault-{build}';", sw.read_text()))
+print('build', build, 'version', ver)

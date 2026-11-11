@@ -258,3 +258,35 @@ ACT.openfu = el => go('profile', { id: +el.dataset.id, tab: 'fu' });
 const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 function chipsHtml(items, sel, attr) { return items.map(c => '<button type="button" class="chip sm ' + (c === sel ? 'on' : '') + '" ' + attr + '="' + esc(c) + '">' + esc(c) + '</button>').join(''); }
 function refresh() { render(true); }
+
+/* ---------- in-app updates ---------- */
+let UPDATE_AVAILABLE = false;
+async function checkUpdate(manual) {
+  try {
+    const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) throw new Error('bad');
+    const j = await r.json();
+    UPDATE_AVAILABLE = j.build !== BUILD_ID;
+    showUpdateBar();
+    if (manual) toast(UPDATE_AVAILABLE ? 'Update available' : 'You are on the latest version');
+    return UPDATE_AVAILABLE;
+  } catch (e) { if (manual) toast('Could not check - are you online?'); return false; }
+}
+function showUpdateBar() {
+  let b = $('#updbar');
+  if (!UPDATE_AVAILABLE) { if (b) b.remove(); return; }
+  if (b) return;
+  b = document.createElement('div'); b.id = 'updbar'; b.className = 'updbar';
+  b.innerHTML = '<span>New version available</span><button>Update now</button>';
+  b.querySelector('button').onclick = applyUpdate;
+  document.body.appendChild(b);
+}
+async function applyUpdate() {
+  const bz = busy('Updating...');
+  try {
+    if ('serviceWorker' in navigator) for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister();
+    if (window.caches) for (const k of await caches.keys()) await caches.delete(k);
+    try { await fetch('index.html', { cache: 'reload' }); await fetch('./', { cache: 'reload' }); } catch (e) { /* offline fallback below */ }
+  } catch (e) { /* ignore */ }
+  location.reload();
+}

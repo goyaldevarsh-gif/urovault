@@ -230,3 +230,6 @@ input[type=date].inp{min-height:50px;display:block;text-align:left;-webkit-min-l
 .big-date{font-size:20px;font-weight:700}
 .sticky-search{position:sticky;top:calc(52px + var(--sat));z-index:11;background:var(--bg);padding:10px 0 4px}
 .sch{position:relative}.sch .ic{position:absolute;left:14px;top:50%;margin-top:-10px;color:var(--t2)}.sch .inp{padding-left:42px}
+
+.updbar{position:fixed;left:12px;right:12px;bottom:calc(74px + var(--sab));z-index:40;max-width:616px;margin:0 auto;background:var(--navy);color:#fff;border-radius:14px;padding:10px 10px 10px 16px;display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px;box-shadow:0 8px 24px rgba(15,41,66,.35)}
+.updbar span{flex:1}.updbar button{border:0;background:var(--teal);color:#fff;font-weight:700;border-radius:10px;height:38px;padding:0 16px;font-size:14px}

@@ -11,11 +11,11 @@ Views.more = async () => {
       '<div style="height:6px"></div>' +
       mrow('stats', 'bars', 'Statistics', 'Practice overview') + mrow('reports', 'download', 'Reports &amp; Export', 'CSV files, printable lists') +
       mrow('backup', 'shield', 'Backup &amp; Restore', 'Keep your data safe') + mrow('settings', 'sliders', 'Settings', 'Lock, sample data, storage') +
-      mrow('privacy', 'lock', 'Privacy &amp; Security', 'How your data is handled') + mrow('help', 'help', 'Help &amp; About', 'Version ' + APP_VERSION) +
+      mrow('privacy', 'lock', 'Privacy &amp; Security', 'How your data is handled') + mrow('help', 'help', 'Help &amp; About', 'Version ' + APP_VERSION) + mrow('upd', 'refresh', UPDATE_AVAILABLE ? 'Update available' : 'Check for updates', UPDATE_AVAILABLE ? 'Tap to install the new version' : 'You are on v' + APP_VERSION) +
       '<div style="height:8px"></div><button class="btn o" data-act="lock">' + ic('lock', 18) + ' Lock now</button>' + copyFoot(), true) + navbar('more'),
     acts: {
       doctor: () => go('doctor'), stats: () => go('stats'), reports: () => go('reports'), backup: () => go('backup'),
-      settings: () => go('settings'), privacy: () => go('privacy'), help: () => go('help'), lock: () => lockNow()
+      settings: () => go('settings'), privacy: () => go('privacy'), help: () => go('help'), lock: () => lockNow(), upd: async () => { if (UPDATE_AVAILABLE || await checkUpdate(true)) { if (await confirmDlg('Install update?', 'The app will reload. Your data stays safe.', 'Update')) applyUpdate(); } }
     }
   };
 };
@@ -176,7 +176,10 @@ async function start() {
   else if (lockOn) STACK = [{ view: 'login' }];
   else { SESSION.unlocked = true; STACK = [{ view: 'home' }]; }
   render();
+  setTimeout(() => checkUpdate(false), 2500);
+  setInterval(() => checkUpdate(false), 30 * 60 * 1000);
   document.addEventListener('visibilitychange', async () => {
+    if (!document.hidden) checkUpdate(false);
     if (document.hidden) SESSION.hiddenAt = Date.now();
     else if (SESSION.unlocked && SESSION.hiddenAt && Date.now() - SESSION.hiddenAt > 120000 && (await metaGet('lockOn')) !== false) lockNow();
   });
