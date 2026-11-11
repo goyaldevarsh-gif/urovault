@@ -168,3 +168,11 @@ async function syEnable(mode) {
 async function syDisconnect() { if (SY.cfg) SY.cfg.on = false; SY.cfg = null; SY.key = null; SY.q = {}; await metaSet('syncCfg', null); await metaSet('syncKey', null); await metaSet('syncq', {}); }
 
 const SY_SQL = "create table if not exists public.records (\n  user_id uuid not null default auth.uid(),\n  k text not null,\n  d text,\n  mt bigint not null,\n  del boolean not null default false,\n  dev text,\n  srv timestamptz not null default now(),\n  primary key (user_id, k)\n);\ncreate index if not exists records_srv on public.records (user_id, srv);\ncreate or replace function public.touch_srv() returns trigger language plpgsql as $$ begin new.srv := clock_timestamp(); return new; end $$;\ndrop trigger if exists records_touch on public.records;\ncreate trigger records_touch before insert or update on public.records for each row execute function public.touch_srv();\nalter table public.records enable row level security;\ndrop policy if exists own_records on public.records;\ncreate policy own_records on public.records for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());\ninsert into storage.buckets (id, name, public) values ('media', 'media', false) on conflict (id) do nothing;\ndrop policy if exists own_media on storage.objects;\ncreate policy own_media on storage.objects for all to authenticated using (bucket_id = 'media' and (storage.foldername(name))[1] = auth.uid()::text) with check (bucket_id = 'media' and (storage.foldername(name))[1] = auth.uid()::text);\n";
+
+/* Cloud login + encryption passphrase derived from the app account, so nothing extra to remember. */
+async function syDerive(id, pw) {
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
+  const bits = async lbl => new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: new TextEncoder().encode('urovault-' + lbl + '-v1:' + id), iterations: 150000, hash: 'SHA-256' }, km, 256));
+  const clean = id.trim().toLowerCase().replace(/\s+/g, '.');
+  return { email: clean.includes('@') ? clean : clean + '@urovault.app', cloudPw: b64e(await bits('cloud')), pass: b64e(await bits('enc')) };
+}

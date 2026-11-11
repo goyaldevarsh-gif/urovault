@@ -231,8 +231,8 @@ input[type=date].inp{min-height:50px;display:block;text-align:left;-webkit-min-l
 <script>
 'use strict';
 /* ===================== UroVault PWA - core: utils, icons, db, repo ===================== */
-const APP_VERSION = '1.5.2';
-const BUILD_ID = '20261111082540';
+const APP_VERSION = '1.5.3';
+const BUILD_ID = '20261111082706';
 const COPYRIGHT = '&copy; 2026 Dr. Devarsh Goyal. All rights reserved.';
 const copyFoot = () => '<div class="small" style="text-align:center;margin:22px 0 4px;opacity:.85">' + COPYRIGHT + '<br>UroVault v' + APP_VERSION + '</div>';
 
@@ -868,6 +868,14 @@ async function syEnable(mode) {
 async function syDisconnect() { if (SY.cfg) SY.cfg.on = false; SY.cfg = null; SY.key = null; SY.q = {}; await metaSet('syncCfg', null); await metaSet('syncKey', null); await metaSet('syncq', {}); }
 
 const SY_SQL = "create table if not exists public.records (\n  user_id uuid not null default auth.uid(),\n  k text not null,\n  d text,\n  mt bigint not null,\n  del boolean not null default false,\n  dev text,\n  srv timestamptz not null default now(),\n  primary key (user_id, k)\n);\ncreate index if not exists records_srv on public.records (user_id, srv);\ncreate or replace function public.touch_srv() returns trigger language plpgsql as $$ begin new.srv := clock_timestamp(); return new; end $$;\ndrop trigger if exists records_touch on public.records;\ncreate trigger records_touch before insert or update on public.records for each row execute function public.touch_srv();\nalter table public.records enable row level security;\ndrop policy if exists own_records on public.records;\ncreate policy own_records on public.records for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());\ninsert into storage.buckets (id, name, public) values ('media', 'media', false) on conflict (id) do nothing;\ndrop policy if exists own_media on storage.objects;\ncreate policy own_media on storage.objects for all to authenticated using (bucket_id = 'media' and (storage.foldername(name))[1] = auth.uid()::text) with check (bucket_id = 'media' and (storage.foldername(name))[1] = auth.uid()::text);\n";
+
+/* Cloud login + encryption passphrase derived from the app account, so nothing extra to remember. */
+async function syDerive(id, pw) {
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
+  const bits = async lbl => new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: new TextEncoder().encode('urovault-' + lbl + '-v1:' + id), iterations: 150000, hash: 'SHA-256' }, km, 256));
+  const clean = id.trim().toLowerCase().replace(/\s+/g, '.');
+  return { email: clean.includes('@') ? clean : clean + '@urovault.app', cloudPw: b64e(await bits('cloud')), pass: b64e(await bits('enc')) };
+}
 
 /* ===================== UroVault PWA - ui infrastructure ===================== */
 const app = $('#app');
@@ -1894,7 +1902,7 @@ function syCard() {
     const pend = Object.keys(SY.q).length;
     return '<div class="card"><div class="kv"><span>Status</span><span style="color:' + (SY.err ? 'var(--redd)' : 'var(--greend)') + '">' + (SY.err ? 'Error' : 'Connected') + '</span></div><div class="kv"><span>Account</span><span>' + esc(c.email) + '</span></div><div class="kv"><span>Last sync</span><span>' + (c.last ? fmtDT(c.last) : 'Not yet') + '</span></div><div class="kv"><span>Waiting to upload</span><span>' + pend + '</span></div>' + (SY.err ? '<div class="small" style="color:var(--redd);margin-top:6px">' + esc(SY.err) + '</div>' : '') + '</div><div style="height:10px"></div><button class="btn" data-act="syNow">' + ic('refresh', 18) + ' Sync now</button><button class="btn o" style="margin-top:8px;color:var(--redd)" data-act="syOff">Disconnect cloud sync</button><div class="small" style="margin-top:8px">End-to-end encrypted. Syncs automatically while the app is open.</div>';
   }
-  return '<div class="card"><div class="small" style="margin-bottom:8px">Auto-backup of all patients and photos to your own Supabase project, <b>encrypted on this phone</b> with your sync passphrase. Setup steps are in Help &amp; About.</div><button class="btn" data-act="syOn">' + ic('upload', 18) + ' Set up cloud sync</button></div>';
+  return '<div class="card"><div class="small" style="margin-bottom:8px">Auto-backup of all patients and photos to your own Supabase project, <b>encrypted on this phone</b> using your UroVault password. Setup steps are in Help &amp; About.</div><button class="btn" data-act="syOn">' + ic('upload', 18) + ' Set up cloud sync</button></div>';
 }
 
 Views.settings = async () => {
@@ -1915,18 +1923,18 @@ Views.settings = async () => {
       aiProv: async el => { await metaSet('aiProv', el.dataset.p); await metaSet('aiModel', ''); refresh(); },
       syNow: async () => { await syncNow(true); refresh(); },
       syOff: async () => { if (!await confirmDlg('Disconnect cloud sync?', 'Data already in the cloud stays there. This device stops syncing.', 'Disconnect', true)) return; await syDisconnect(); refresh(); },
-      syOn: () => sheet('<h3>Cloud sync setup</h3><label class="lbl">Supabase project URL</label><input class="inp" id="sy1" placeholder="https://xxxx.supabase.co" autocapitalize="off" autocorrect="off"><label class="lbl">Supabase anon (public) key</label><input class="inp" id="sy2" autocapitalize="off" autocorrect="off"><label class="lbl">Cloud account email</label><input class="inp" id="sy3" type="email" autocapitalize="off"><label class="lbl">Cloud account password</label><input class="inp" id="sy4" type="password"><label class="lbl">Sync passphrase (encrypts your data)</label><input class="inp" id="sy5" type="password" placeholder="At least 8 characters"><div class="small" style="margin-top:6px"><b>Do not lose the sync passphrase.</b> Without it nobody can decrypt the cloud copy. On a new phone you enter the same details.</div><div class="ferr" id="sye"></div><div style="height:12px"></div><button class="btn" id="syg">Connect</button>', (s, close) => {
+      syOn: () => sheet('<h3>Cloud sync setup</h3><div class="small" style="margin-bottom:6px">Uses your UroVault login. No separate cloud password or passphrase to remember.</div><label class="lbl">Supabase project URL</label><input class="inp" id="sy1" placeholder="https://xxxx.supabase.co" autocapitalize="off" autocorrect="off"><label class="lbl">Supabase publishable / anon key</label><input class="inp" id="sy2" autocapitalize="off" autocorrect="off"><label class="lbl">Your UroVault password</label><input class="inp" id="sy4" type="password" autocomplete="off"><div class="small" style="margin-top:6px">On a new phone, create the UroVault account with the <b>same login ID and password</b>, then set up sync with the same URL and key. <b>If you forget this password, the cloud copy cannot be opened.</b></div><div class="ferr" id="sye"></div><div style="height:12px"></div><button class="btn" id="syg">Connect</button>', (s, close) => {
         $('#syg', s).onclick = async () => {
-          const f = { url: $('#sy1', s).value, anon: $('#sy2', s).value, email: $('#sy3', s).value, pw: $('#sy4', s).value, pass: $('#sy5', s).value }, e = $('#sye', s);
+          const f = { url: $('#sy1', s).value, anon: $('#sy2', s).value }, pw = $('#sy4', s).value, e = $('#sye', s);
           f.url = f.url.trim().replace(/\s+/g, ''); if (f.url && !/^https?:\/\//i.test(f.url)) f.url = 'https://' + f.url;
-          f.anon = f.anon.replace(/\s+/g, ''); f.email = f.email.trim();
+          f.anon = f.anon.replace(/\s+/g, '');
           if (!/^https:\/\/.+\..+/i.test(f.url)) return e.textContent = 'Project URL looks wrong or empty';
           if (f.anon.length < 20) return e.textContent = 'API key looks wrong or empty';
-          if (!/.+@.+\..+/.test(f.email)) return e.textContent = 'Email looks wrong or empty';
-          if (f.pw.length < 6) return e.textContent = 'Cloud password needs 6+ characters (' + f.pw.length + ' entered)';
-          if (f.pass.length < 8) return e.textContent = 'Sync passphrase needs 8+ characters';
+          const a = await Auth.acct();
+          if (!await Auth.verify(a.id, pw)) return e.textContent = 'UroVault password is incorrect';
+          if (pw.length < 8) return e.textContent = 'Use a UroVault password of 8+ characters for encryption (Settings > Change password), then try again';
           let st;
-          try { st = await withBusy('Connecting...', () => syConnect(f)); } catch (x) { SY.cfg = null; SY.key = null; return e.textContent = x.message || 'Failed'; }
+          try { const d = await withBusy('Preparing...', () => syDerive(a.id, pw)); f.email = d.email; f.pw = d.cloudPw; f.pass = d.pass; st = await withBusy('Connecting...', () => syConnect(f)); } catch (x) { SY.cfg = null; SY.key = null; return e.textContent = x.message || 'Failed'; }
           close();
           let mode = 'push';
           if (st.hasRemote && st.hasLocal) { if (!await confirmDlg('Cloud already has data', 'This device also has data. Use the cloud copy and REPLACE what is on this phone? (Take a backup first if unsure.)', 'Use cloud data', true)) { SY.cfg = null; SY.key = null; return; } mode = 'pull'; }
@@ -1953,7 +1961,7 @@ Views.settings = async () => {
           if (!await Auth.verify(a.id, $('#cp0', s).value)) return e.textContent = 'Current password is incorrect';
           if ($('#cp1', s).value.length < 6) return e.textContent = 'New password must be at least 6 characters';
           if ($('#cp1', s).value !== $('#cp2', s).value) return e.textContent = 'Passwords do not match';
-          await withBusy('Updating...', () => Auth.setPassword($('#cp1', s).value)); close(); toast('Password changed');
+          await withBusy('Updating...', () => Auth.setPassword($('#cp1', s).value)); close(); toast('Password changed'); if (SY.cfg && SY.cfg.on) alertDlg('Cloud sync note', 'Cloud sync was set up with your OLD password and keeps working on this phone. On a new phone, create the account with the OLD password, or Disconnect and set up sync again here with the new one.');
         };
       }),
       loadDemo: async () => { await withBusy('Loading...', () => Repo.loadDemo()); toast('Sample patients added'); refresh(); },
@@ -1985,7 +1993,7 @@ Views.help = async () => ({
     '<div class="card"><b>Install on iPhone</b><div class="small" style="color:var(--navy);margin-top:6px">Open this page in Safari, tap Share, then <b>Add to Home Screen</b>. Open it from the icon afterwards.</div></div>' +
     '<div class="card"><b>Getting updates</b><div class="small" style="color:var(--navy);margin-top:6px">After a new version is published, fully close the app and reopen it twice. Your data is kept.</div></div>' +
     '<div class="card"><b>Registering quickly</b><div class="small" style="color:var(--navy);margin-top:6px">Tap the + button, enter UHID, name, age, sex and complaints, then pick the diagnosis with one tap. Everything else can be added later from the patient profile.</div></div>' +
-    '<div class="card"><b>Cloud sync setup (one time)</b><div class="small" style="color:var(--navy);margin-top:6px;line-height:1.55">1. Make a free project at supabase.com.<br>2. Open <b>SQL Editor</b>, paste the SQL (button below) and press Run.<br>3. <b>Authentication &rarr; Sign In / Providers &rarr; Email</b>: turn OFF "Confirm email".<br>4. <b>Project Settings &rarr; API</b>: copy the Project URL and the <b>anon public</b> key (never the service_role key).<br>5. Settings &rarr; Cloud sync &rarr; Set up. Choose any email and password for the cloud account, and a sync passphrase.</div><div style="height:10px"></div><button class="btn o" data-act="copySql">Copy setup SQL</button></div>' +
+    '<div class="card"><b>Cloud sync setup (one time)</b><div class="small" style="color:var(--navy);margin-top:6px;line-height:1.55">1. Make a free project at supabase.com.<br>2. Open <b>SQL Editor</b>, paste the SQL (button below) and press Run.<br>3. <b>Authentication &rarr; Sign In / Providers &rarr; Email</b>: turn OFF "Confirm email".<br>4. <b>Project Settings &rarr; API</b>: copy the Project URL and the <b>anon public</b> key (never the service_role key).<br>5. Settings &rarr; Cloud sync &rarr; Set up: paste the URL and key, then enter your UroVault password. That is all. The cloud login and encryption are derived from it automatically.</div><div style="height:10px"></div><button class="btn o" data-act="copySql">Copy setup SQL</button></div>' +
     '<div class="card"><b>Keep backups</b><div class="small" style="color:var(--navy);margin-top:6px">Browsers can clear site data. Use More &rarr; Backup &amp; Restore at least weekly and keep the file in iCloud Drive or on your computer.</div></div>')
 });
 
