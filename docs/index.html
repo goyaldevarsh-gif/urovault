@@ -231,8 +231,8 @@ input[type=date].inp{min-height:50px;display:block;text-align:left;-webkit-min-l
 <script>
 'use strict';
 /* ===================== UroVault PWA - core: utils, icons, db, repo ===================== */
-const APP_VERSION = '1.5.2';
-const BUILD_ID = '20261111082000';
+const APP_VERSION = '1.6.0';
+const BUILD_ID = '20261111082306';
 const COPYRIGHT = '&copy; 2026 Dr. Devarsh Goyal. All rights reserved.';
 const copyFoot = () => '<div class="small" style="text-align:center;margin:22px 0 4px;opacity:.85">' + COPYRIGHT + '<br>UroVault v' + APP_VERSION + '</div>';
 
@@ -531,6 +531,8 @@ const Repo = {
     await Repo.touch(rec.patientId); await Repo.audit(s.id ? 'update' : 'create', 'surgery', id, rec.patientId);
     return id;
   },
+  async stents() { const [sur, ps] = await Promise.all([dbAll('surgeries'), dbAll('patients')]); const pm = new Map(ps.map(p => [p.id, p])); return sur.filter(s => s.stent && !s.stentRemoved && pm.has(s.patientId)).map(s => ({ s, p: pm.get(s.patientId) })).sort((a, b) => (a.s.stentDue || '9999').localeCompare(b.s.stentDue || '9999')); },
+  async removeStent(id) { const s = await dbGet('surgeries', id); if (!s) return; s.stentRemoved = iso(today()); await dbPut('surgeries', s); await Repo.touch(s.patientId); await Repo.audit('update', 'surgery', id, s.patientId); },
   async delSurgery(id) { await Repo.delRefMedia('surgery', id); await dbDel('surgeries', id); await Repo.audit('delete', 'surgery', id); },
   /* ---- follow-ups ---- */
   async fus(pid) { return (await dbBy('followups', pid)).sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id); },
@@ -1161,6 +1163,19 @@ async function applyUpdate() {
   location.reload();
 }
 
+/* ---------- follow-up reminders: WhatsApp message + calendar file ---------- */
+function waLink(mobile, text) {
+  let d = (mobile || '').replace(/\D/g, '');
+  if (d.length === 10) d = '91' + d; else if (d.length === 11 && d[0] === '0') d = '91' + d.slice(1);
+  return 'https://wa.me/' + d + '?text=' + encodeURIComponent(text);
+}
+function icsBlob(id, date, summary, desc) {
+  const ymd = date.replace(/-/g, ''), nx = new Date(date + 'T00:00:00Z'); nx.setUTCDate(nx.getUTCDate() + 1);
+  const end = nx.toISOString().slice(0, 10).replace(/-/g, ''), st = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+  const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//UroVault//EN', 'BEGIN:VEVENT', 'UID:urovault-' + id + '@urovault', 'DTSTAMP:' + st, 'DTSTART;VALUE=DATE:' + ymd, 'DTEND;VALUE=DATE:' + end, 'SUMMARY:' + summary, 'DESCRIPTION:' + desc, 'BEGIN:VALARM', 'TRIGGER:-P1D', 'ACTION:DISPLAY', 'DESCRIPTION:Follow-up tomorrow', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'];
+  return new Blob([L.join('\r\n')], { type: 'text/calendar' });
+}
+
 /* ===================== views: auth, home, patients, registration, diagnosis ===================== */
 
 Views.splash = async () => ({
@@ -1230,7 +1245,7 @@ function lockNow() { if (!SESSION.unlocked) return; SESSION.unlocked = false; ST
 
 /* ---------------- home ---------------- */
 Views.home = async () => {
-  const [a, c, pend, ps, lastBk] = await Promise.all([Auth.acct(), Repo.counts(), Repo.pending(), Repo.patients(), metaGet('lastBackup')]);
+  const [a, c, pend, ps, lastBk, stents] = await Promise.all([Auth.acct(), Repo.counts(), Repo.pending(), Repo.patients(), metaGet('lastBackup'), Repo.stents()]);
   const t = iso(today());
   const due = pend.filter(f => f.date <= t).slice(0, 5);
   const recent = ps.slice().sort((x, y) => (y.updatedAt || '').localeCompare(x.updatedAt || '')).slice(0, 5);
@@ -1253,12 +1268,15 @@ Views.home = async () => {
         '<button data-act="caseSeries"><div class="iconbox">' + ic('file', 22) + '</div>Case Series</button></div>' +
         '<div class="sec"><h2>Follow-ups Due</h2><button data-act="tab" data-v="followups">View all</button></div>' +
         (due.length ? due.map(fuTile).join('') : '<div class="card small" style="text-align:center;padding:22px">Nothing due. You are all caught up.</div>') +
+        (stents.length ? '<div class="sec"><h2>DJ Stents in situ</h2></div>' + stents.slice(0, 8).map(({ s, p }) => { const dd = s.stentDue ? dayDiff(s.stentDue) : null, pc = dd === null ? 'grey' : dd < 0 ? 'red' : dd <= 7 ? 'amber' : ''; return '<div class="card tile"><div class="grow" data-act="openSurg" data-id="' + p.id + '"><div class="t-name">' + esc(p.name) + '</div><div class="t-sub"><b>' + esc(p.uhid) + '</b> &middot; ' + esc(s.procedure) + '</div><div style="margin-top:6px"><span class="pill ' + pc + '">' + (s.stentDue ? (dd < 0 ? 'Overdue ' + (-dd) + 'd' : dd === 0 ? 'Remove today' : 'Remove ' + fmt(s.stentDue)) : 'No removal date') + '</span></div></div><button class="btn o sm" style="width:auto;padding:0 14px" data-act="stentOut" data-id="' + s.id + '">Removed</button></div>'; }).join('') : '') +
         '<div class="sec"><h2>Recent Patients</h2><button data-act="tab" data-v="patients">View all</button></div>' +
         (recent.length ? recent.map(ptile).join('') : emptyBox('users', 'No patients yet', 'Register your first patient to get started.', '<button class="btn" data-act="newPatient">Register Patient</button>')), true) + navbar('home'),
     acts: {
       searchP: () => { PSTATE.focus = true; setTab('patients'); },
       allSurg: () => go('allSurgeries'),
-      goBackup: () => go('backup')
+      goBackup: () => go('backup'),
+      openSurg: el => go('profile', { id: +el.dataset.id, tab: 'surgery' }),
+      stentOut: async el => { if (await confirmDlg('Stent removed?', 'Mark this DJ stent as removed today.', 'Yes, removed')) { await Repo.removeStent(+el.dataset.id); toast('Marked removed'); refresh(); } }
     }
   };
 };
@@ -1410,6 +1428,7 @@ const TABS = [['overview', 'Overview'], ['media', 'Media'], ['inv', 'Investigati
 Views.profile = async (params) => {
   const pid = params.id;
   const p = await Repo.patient(pid);
+  const acct = p ? await Auth.acct() : null;
   if (!p) return { html: hdr('Patient') + wrapPage(emptyBox('alert', 'Patient not found', 'This record may have been deleted.')) };
   let tab = params.tab || 'overview';
   let mcat = 'All';
@@ -1476,6 +1495,7 @@ Views.profile = async (params) => {
     return '<div class="sec"><h2>Next Follow-up</h2></div>' + (pend ?
       '<div class="card"><div style="display:flex;align-items:center;gap:10px"><div class="big-date" style="flex:1">' + fmt(pend.date) + '</div><span class="pill ' + (dayDiff(pend.date) < 0 ? 'red' : dayDiff(pend.date) === 0 ? 'amber' : '') + '">' + esc(relDays(pend.date)) + '</span></div>' +
       '<div class="row" style="margin-top:12px"><button class="btn sm" data-act="visit">Record visit</button><button class="btn o sm" data-act="chgDate">Change date</button></div>' +
+      '<div class="row" style="margin-top:8px"><button class="btn o sm" data-act="fuWa" data-d="' + pend.date + '">WhatsApp reminder</button><button class="btn o sm" data-act="fuIcs" data-d="' + pend.date + '" data-id="' + pend.id + '">Add to Calendar</button></div>' +
       '<div style="text-align:center;margin-top:8px"><button class="linkbtn" style="color:var(--redd)" data-act="cancelFu" data-id="' + pend.id + '">Cancel follow-up</button></div></div>' :
       '<div class="card"><div class="small" style="margin-bottom:10px">None scheduled. Schedule after:</div><div class="chips wrapchips">' + INTERVALS.map(i => '<button class="chip sm" data-act="quickSched" data-i="' + i + '">' + i + '</button>').join('') + '</div>' +
       '<div style="margin-top:12px"><button class="btn sm" data-act="visit">Record a visit now</button></div></div>') +
@@ -1499,6 +1519,16 @@ Views.profile = async (params) => {
   };
 
   const acts = {
+    fuWa: el => {
+      if (!p.mobile) return toast('No mobile number saved for this patient');
+      const dr = 'Dr. ' + acct.name.replace(/^dr\.?\s*/i, '');
+      const dt = new Date(el.dataset.d + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      window.open(waLink(p.mobile, 'Namaste ' + p.name + ', ' + dr + ' ki OPD mein aapki follow-up ' + dt + ' ko hai. Kripya apni purani reports aur dawaiyan saath laayein. Koi dikkat ho to bata dijiye.'), '_blank');
+    },
+    fuIcs: async el => {
+      const r = await shareOrSave(icsBlob(el.dataset.id, el.dataset.d, 'Follow-up: UHID ' + p.uhid, 'UroVault follow-up'), 'followup-' + p.uhid.replace(/[^A-Za-z0-9]+/g, '-') + '.ics');
+      if (r !== 'cancelled') toast(r === 'shared' ? 'Open the file to add to Calendar' : 'Saved - open to add to Calendar');
+    },
     ptab: el => { tab = el.dataset.t; window.scrollTo(0, 0); fill(); },
     mcat: el => { mcat = el.dataset.c; fill(); },
     menu: () => sheet('<h3>' + esc(p.name) + '</h3><div style="height:8px"></div>' +
@@ -1608,7 +1638,7 @@ Views.surgeryForm = async ({ pid, id }) => {
   const pt = await Repo.patient(pid);
   const v = s || {};
   const media = s ? (await Repo.media(pid)).filter(m => m.refType === 'surgery' && m.refId === s.id) : [];
-  let cat = null;
+  let cat = null, stOn = !!v.stent;
   const ta = (k, l, ph) => '<label class="lbl">' + l + '</label><textarea class="ta" id="' + k + '" style="min-height:84px" placeholder="' + ph + '">' + esc(v[k] || '') + '</textarea>';
   return {
     html: hdr(s ? 'Edit Surgery' : 'Add Surgery') + wrapPage(
@@ -1616,6 +1646,8 @@ Views.surgeryForm = async ({ pid, id }) => {
       '<label class="lbl" style="margin-top:4px">Procedure <i>*</i></label><div class="chips wrapchips" id="procs">' + PROCEDURES.map(x => '<button type="button" class="chip sm ' + (v.procedure === x ? 'on' : '') + '" data-p="' + esc(x) + '">' + esc(x) + '</button>').join('') + '</div>' +
       '<input class="inp" id="proc" style="margin-top:10px" placeholder="Procedure name (type or pick above)" value="' + esc(v.procedure || '') + '">' +
       '<label class="lbl">Date <i>*</i></label><input class="inp" type="date" id="sdate" value="' + (v.date || iso(today())) + '">' +
+      '<label class="lbl">DJ stent placed?</label><div class="chips wrapchips" id="stsel"><button type="button" class="chip sm ' + (!v.stent ? 'on' : '') + '" data-s="0">No</button><button type="button" class="chip sm ' + (v.stent ? 'on' : '') + '" data-s="1">Yes</button></div>' +
+      '<div id="stbox" style="display:' + (v.stent ? 'block' : 'none') + '"><label class="lbl">Planned stent removal date</label><input class="inp" type="date" id="stdue" value="' + esc(v.stentDue || '') + '"><div class="small" style="margin-top:4px">Shown on Home until marked removed.</div><label class="lbl">Stent removed on (leave empty if still in)</label><input class="inp" type="date" id="strem" value="' + esc(v.stentRemoved || '') + '"></div>' +
       '<label class="lbl">Duration of surgery (minutes)</label><input class="inp" id="duration" type="number" inputmode="numeric" min="0" max="1440" placeholder="e.g. 90" value="' + esc(v.duration || '') + '"><div class="small" id="durl" style="margin-top:5px">' + esc(fmtDur(v.duration)) + '</div>' +
       '<label class="lbl">Assistants</label>' + [1, 2, 3].map(n => '<input class="inp" id="assist' + n + '" style="margin-bottom:8px" placeholder="Assistant ' + n + '" value="' + esc(v['assist' + n] || '') + '">').join('') +
       ta('indication', 'Indication', 'Why was it done?') + ta('findings', 'Operative findings', 'Findings') + ta('notes', 'Operative notes', 'Technique, complications') +
@@ -1631,7 +1663,7 @@ Views.surgeryForm = async ({ pid, id }) => {
         if (!date) return toast('Date is required');
         const st = Views._sst;
         await withBusy('Saving...', async () => {
-          const sid = await Repo.saveSurgery({ id: s ? s.id : undefined, createdAt: s ? s.createdAt : undefined, patientId: pid, procedure: proc, date, duration: $('#duration').value, assist1: $('#assist1').value, assist2: $('#assist2').value, assist3: $('#assist3').value, indication: $('#indication').value, findings: $('#findings').value, notes: $('#notes').value, hpe: $('#hpe').value, postop: $('#postop').value });
+          const sid = await Repo.saveSurgery({ id: s ? s.id : undefined, createdAt: s ? s.createdAt : undefined, patientId: pid, procedure: proc, date, duration: $('#duration').value, stent: stOn, stentDue: stOn ? ($('#stdue').value || null) : null, stentRemoved: stOn ? ($('#strem').value || null) : null, assist1: $('#assist1').value, assist2: $('#assist2').value, assist3: $('#assist3').value, indication: $('#indication').value, findings: $('#findings').value, notes: $('#notes').value, hpe: $('#hpe').value, postop: $('#postop').value });
           await saveStaged(st, { pid, category: cat || 'Other', takenAt: date, refType: 'surgery', refId: sid, caption: proc });
         });
         toast('Surgery saved'); back();
@@ -1640,6 +1672,7 @@ Views.surgeryForm = async ({ pid, id }) => {
     },
     bind: root => {
       Views._sst = bindAttach($('#sattach'));
+      $('#stsel').onclick = e => { const b = e.target.closest('[data-s]'); if (!b) return; stOn = b.dataset.s === '1'; $$('#stsel .chip').forEach(x => x.classList.toggle('on', x === b)); $('#stbox').style.display = stOn ? 'block' : 'none'; if (stOn && !$('#stdue').value) { const d = new Date(($('#sdate').value || iso(today())) + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 21); $('#stdue').value = d.toISOString().slice(0, 10); } };
       $('#duration').oninput = e => { $('#durl').textContent = fmtDur(e.target.value); };
       $('#procs').onclick = e => { const b = e.target.closest('[data-p]'); if (!b) return; $('#proc').value = b.dataset.p; $$('#procs .chip').forEach(x => x.classList.toggle('on', x === b)); };
       $('#scats').onclick = e => { const c = e.target.closest('[data-c]'); if (!c) return; cat = c.dataset.c; $$('#scats .chip').forEach(x => x.classList.toggle('on', x === c)); };

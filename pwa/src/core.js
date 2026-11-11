@@ -1,6 +1,6 @@
 'use strict';
 /* ===================== UroVault PWA - core: utils, icons, db, repo ===================== */
-const APP_VERSION = '1.5.2';
+const APP_VERSION = '1.6.0';
 const BUILD_ID = '__BUILD__';
 const COPYRIGHT = '&copy; 2026 Dr. Devarsh Goyal. All rights reserved.';
 const copyFoot = () => '<div class="small" style="text-align:center;margin:22px 0 4px;opacity:.85">' + COPYRIGHT + '<br>UroVault v' + APP_VERSION + '</div>';
@@ -300,6 +300,8 @@ const Repo = {
     await Repo.touch(rec.patientId); await Repo.audit(s.id ? 'update' : 'create', 'surgery', id, rec.patientId);
     return id;
   },
+  async stents() { const [sur, ps] = await Promise.all([dbAll('surgeries'), dbAll('patients')]); const pm = new Map(ps.map(p => [p.id, p])); return sur.filter(s => s.stent && !s.stentRemoved && pm.has(s.patientId)).map(s => ({ s, p: pm.get(s.patientId) })).sort((a, b) => (a.s.stentDue || '9999').localeCompare(b.s.stentDue || '9999')); },
+  async removeStent(id) { const s = await dbGet('surgeries', id); if (!s) return; s.stentRemoved = iso(today()); await dbPut('surgeries', s); await Repo.touch(s.patientId); await Repo.audit('update', 'surgery', id, s.patientId); },
   async delSurgery(id) { await Repo.delRefMedia('surgery', id); await dbDel('surgeries', id); await Repo.audit('delete', 'surgery', id); },
   /* ---- follow-ups ---- */
   async fus(pid) { return (await dbBy('followups', pid)).sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id); },

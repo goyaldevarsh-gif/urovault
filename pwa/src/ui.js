@@ -290,3 +290,16 @@ async function applyUpdate() {
   } catch (e) { /* ignore */ }
   location.reload();
 }
+
+/* ---------- follow-up reminders: WhatsApp message + calendar file ---------- */
+function waLink(mobile, text) {
+  let d = (mobile || '').replace(/\D/g, '');
+  if (d.length === 10) d = '91' + d; else if (d.length === 11 && d[0] === '0') d = '91' + d.slice(1);
+  return 'https://wa.me/' + d + '?text=' + encodeURIComponent(text);
+}
+function icsBlob(id, date, summary, desc) {
+  const ymd = date.replace(/-/g, ''), nx = new Date(date + 'T00:00:00Z'); nx.setUTCDate(nx.getUTCDate() + 1);
+  const end = nx.toISOString().slice(0, 10).replace(/-/g, ''), st = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+  const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//UroVault//EN', 'BEGIN:VEVENT', 'UID:urovault-' + id + '@urovault', 'DTSTAMP:' + st, 'DTSTART;VALUE=DATE:' + ymd, 'DTEND;VALUE=DATE:' + end, 'SUMMARY:' + summary, 'DESCRIPTION:' + desc, 'BEGIN:VALARM', 'TRIGGER:-P1D', 'ACTION:DISPLAY', 'DESCRIPTION:Follow-up tomorrow', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'];
+  return new Blob([L.join('\r\n')], { type: 'text/calendar' });
+}
