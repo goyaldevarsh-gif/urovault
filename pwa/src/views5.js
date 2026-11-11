@@ -263,6 +263,25 @@ function guideSummary(p, k) {
   return { risk: c.badge || '', inputs: Object.entries(c.a || {}).filter(([, v]) => v !== '' && v != null).map(([x, v]) => x + ': ' + v).join('; ') };
 }
 
+
+/* ---------------- optional AI review (opt-in, de-identified, user's own API key) ---------------- */
+function aiPayload(p, kind, a, r) {
+  const band = Math.floor((Number(p.age) || 0) / 10) * 10;
+  const lines = ['Specialty: urology (' + GUIDE[kind].name + ')', 'Patient: ' + (band ? band + 's' : 'age n/a') + ', ' + (p.sex || 'sex n/a'), '', 'Entered clinical data:'];
+  Object.entries(a).forEach(([k, v]) => { const f = GF[kind].find(x => x.id === k); lines.push('- ' + (f ? f.l : k) + ': ' + v); });
+  lines.push('', 'Rule-based EAU 2026 assessment: ' + (r.badge || 'not assignable yet'));
+  r.secs.forEach(s => { lines.push(s.h + ':'); s.rows.forEach(x => lines.push('  - ' + x.t)); });
+  if (r.miss.length) lines.push('Missing data: ' + [...new Set(r.miss)].join(', '));
+  return lines.join('\n');
+}
+async function aiReview(text, key, model) {
+  const sys = 'You are a urology decision-support assistant for a resident doctor. You get de-identified clinical inputs and a rule-based EAU 2026 summary. Reply in concise English with three short headed lists: (1) Possible inconsistencies or data-entry doubts, (2) Missing information that could change management, (3) Questions to ask or investigations to consider. Base advice only on established EAU guideline principles, do not invent recommendations or numbers, say when unsure. The final decision rests with the treating doctor.';
+  const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify({ model: model || 'claude-sonnet-5-5', max_tokens: 900, system: sys, messages: [{ role: 'user', content: text }] }) });
+  const j = await r.json();
+  if (!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status));
+  return (j.content || []).map(c => c.text || '').join('\n').trim();
+}
+
 Views.guide = async ({ pid, kind }) => {
   const p = await Repo.patient(pid); const G = GUIDE[kind];
   let a = Object.assign({}, p.clin && p.clin[kind] ? p.clin[kind].a : {});
@@ -285,8 +304,22 @@ Views.guide = async ({ pid, kind }) => {
       '<div class="phead" style="margin-bottom:4px"><div class="avatar">' + esc(initials(p.name)) + '</div><div><div class="t-name">' + esc(p.name) + '</div><div class="t-sub"><b>' + esc(p.uhid) + '</b> &middot; ' + p.age + 'y &middot; ' + G.name + '</div></div></div>' +
       '<div class="banner" style="margin-top:12px">' + ic('shield', 16) + ' On-device only. Nothing is sent anywhere.</div>' +
       '<div id="gq">' + form() + '</div><div style="height:6px"></div><div id="ga">' + result() + '</div>' +
+      '<div class="sec" style="margin:16px 0 8px"><h2>AI review (optional)</h2></div><div class="card"><div class="small" style="margin-bottom:10px">Sends only the answers above (no name, UHID, mobile or exact age) to Claude using your own API key, after you preview and approve it.</div><button class="btn o" data-act="aiGo">' + ic('book', 18) + ' Review with AI</button><div id="aiout"></div></div>' +
       '<div class="small" style="margin-top:18px;line-height:1.5">' + esc(EAU_VER) + '. Recommendations are paraphrased from the guidelines for decision support. They do not replace clinical judgement or the full guideline text - verify before acting. Answers are saved to this patient automatically.</div>'),
     acts: {
+      aiGo: async () => {
+        const key = await metaGet('aiKey');
+        if (!key) return alertDlg('AI not set up', 'Add your Anthropic API key in Settings > AI assistant first.');
+        const model = await metaGet('aiModel'); const text = aiPayload(p, kind, a, G.fn(a, p));
+        sheet('<h3>Review before sending</h3><div class="small" style="margin-bottom:8px">This exact text will be sent to Anthropic (api.anthropic.com). Nothing else is sent.</div><div class="card pre" style="max-height:38vh;overflow:auto;font-size:13px">' + esc(text) + '</div><div style="height:12px"></div><button class="btn" id="aiok">Send</button><button class="btn o" style="margin-top:8px" id="aino">Cancel</button>', (sh, close) => {
+          $('#aino', sh).onclick = close;
+          $('#aiok', sh).onclick = async () => {
+            close();
+            try { const out = await withBusy('Asking AI...', () => aiReview(text, key, model)); $('#aiout').innerHTML = '<div class="pre" style="margin-top:12px;font-size:14.5px">' + esc(out) + '</div><div class="small" style="margin-top:8px">AI-generated. Verify against the guideline.</div>'; await Repo.audit('ai_review', 'guidance', null, pid); }
+            catch (e) { alertDlg('AI request failed', String(e.message || e)); }
+          };
+        });
+      },
       gp: el => {
         const id = el.dataset.f, v = el.dataset.v;
         if (a[id] === v) delete a[id]; else a[id] = v;

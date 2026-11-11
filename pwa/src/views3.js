@@ -113,17 +113,19 @@ Views.backup = async () => {
 
 /* ---- settings ---- */
 Views.settings = async () => {
-  const [lockOn, demo, est, persisted] = await Promise.all([metaGet('lockOn'), Repo.hasDemo(), (navigator.storage && navigator.storage.estimate ? navigator.storage.estimate() : Promise.resolve(null)), (navigator.storage && navigator.storage.persisted ? navigator.storage.persisted() : Promise.resolve(false))]);
+  const [lockOn, demo, est, persisted, aiKey, aiModel] = await Promise.all([metaGet('lockOn'), Repo.hasDemo(), (navigator.storage && navigator.storage.estimate ? navigator.storage.estimate() : Promise.resolve(null)), (navigator.storage && navigator.storage.persisted ? navigator.storage.persisted() : Promise.resolve(false)), metaGet('aiKey'), metaGet('aiModel')]);
   const on = lockOn !== false;
   return {
     html: hdr('Settings') + wrapPage(
       '<div class="card mrow"><div class="iconbox">' + ic('lock', 20) + '</div><div class="grow"><div class="t">Require password</div><div class="s">Asked on open and after 2 min away</div></div><button class="sw ' + (on ? 'on' : '') + '" data-act="lockTog" aria-label="Toggle"></button></div>' +
       mrow('chpw', 'edit', 'Change password') +
       '<div class="sec"><h2>App update</h2></div><div class="card"><div class="kv"><span>Installed version</span><span>v' + APP_VERSION + '</span></div><div class="kv"><span>Status</span><span>' + (UPDATE_AVAILABLE ? 'Update available' : 'Not checked / up to date') + '</span></div></div><div style="height:10px"></div><button class="btn" data-act="updCheck">' + ic('refresh', 18) + ' Check &amp; update to latest</button><div class="small" style="margin-top:8px">Always loads the newest version, even if the update banner did not appear. Your patient data stays safe.</div>' +
+      '<div class="sec"><h2>AI assistant (optional)</h2></div><div class="card"><div class="small" style="margin-bottom:8px">Used only for "Review with AI" in EAU Guidance. Your key is stored on this device only. Patient identity is never sent.</div><label class="lbl">Anthropic API key</label><input class="inp" type="password" id="aik" placeholder="sk-ant-..." value="' + esc(aiKey || '') + '" autocomplete="off"><label class="lbl">Model</label><input class="inp" id="aim" value="' + esc(aiModel || 'claude-sonnet-5-5') + '"><div style="height:10px"></div><button class="btn sm" data-act="aiSave">Save</button></div>' +
       '<div class="sec"><h2>Sample data</h2></div>' + (demo ? mrow('clearDemo', 'trash', 'Remove sample patients', 'Deletes the 4 demo records') : mrow('loadDemo', 'plusc', 'Load sample patients', 'Four fictional patients to explore the app')) +
       '<div class="sec"><h2>Storage</h2></div><div class="card"><div class="kv"><span>Used</span><span>' + (est ? (est.usage / 1048576).toFixed(1) + ' MB' : 'n/a') + '</span></div><div class="kv"><span>Protected from eviction</span><span>' + (persisted ? 'Yes' : 'Not guaranteed') + '</span></div></div>' +
       '<div class="sec"><h2>Danger zone</h2></div><button class="btn o" style="color:var(--redd);border-color:var(--red)" data-act="erase">' + ic('trash', 18) + ' Erase all data</button>'),
     acts: {
+      aiSave: async () => { await metaSet('aiKey', $('#aik').value.trim()); await metaSet('aiModel', $('#aim').value.trim() || 'claude-sonnet-5-5'); toast('Saved'); },
       updCheck: async () => { await checkUpdate(false); applyUpdate(); },
       lockTog: async () => { await metaSet('lockOn', !on); refresh(); },
       chpw: () => sheet('<h3>Change password</h3><label class="lbl">Current password</label><input class="inp" type="password" id="cp0"><label class="lbl">New password</label><input class="inp" type="password" id="cp1" placeholder="At least 6 characters"><label class="lbl">Confirm new password</label><input class="inp" type="password" id="cp2"><div class="ferr" id="cpe"></div><div style="height:14px"></div><button class="btn" id="cps">Update</button>', (s, close) => {
