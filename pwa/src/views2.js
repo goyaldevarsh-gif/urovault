@@ -62,7 +62,7 @@ Views.profile = async (params) => {
       const att = media.filter(m => m.refType === 'surgery' && m.refId === s.id);
       return '<div class="card tap" data-act="editSurg" data-id="' + s.id + '"><div style="display:flex;gap:10px;align-items:center"><div class="iconbox">' + ic('scalpel', 22) + '</div><div style="flex:1;min-width:0"><div class="t-name" style="white-space:normal">' + esc(s.procedure) + '</div><div class="t-sub">' + fmt(s.date) + '</div></div>' + ic('chev', 18) + '</div>' +
         (s.indication ? '<div class="small" style="margin-top:8px;color:var(--navy)">' + esc(s.indication) + '</div>' : '') +
-        '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' + (s.hpe ? '<span class="pill">HPE</span>' : '') + (s.postop ? '<span class="pill grey">Post-op notes</span>' : '') + (att.length ? '<span class="pill grey">' + att.length + ' attachment' + (att.length > 1 ? 's' : '') + '</span>' : '') + '</div></div>';
+        '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' + (s.duration ? '<span class="pill grey">' + fmtDur(s.duration) + '</span>' : '') + (assistants(s).length ? '<span class="pill grey">Asst: ' + esc(assistants(s).join(', ')) + '</span>' : '') + (s.hpe ? '<span class="pill">HPE</span>' : '') + (s.postop ? '<span class="pill grey">Post-op notes</span>' : '') + (att.length ? '<span class="pill grey">' + att.length + ' attachment' + (att.length > 1 ? 's' : '') + '</span>' : '') + '</div></div>';
     }).join('') : emptyBox('scalpel', 'No surgeries recorded', 'Add the procedure, findings and histopathology.'));
   }
   async function fuTab() {
@@ -200,15 +200,19 @@ async function invSheet(pid, o, done) {
 /* ---------------- surgery form ---------------- */
 Views.surgeryForm = async ({ pid, id }) => {
   const s = id ? await dbGet('surgeries', id) : null;
+  const pt = await Repo.patient(pid);
   const v = s || {};
   const media = s ? (await Repo.media(pid)).filter(m => m.refType === 'surgery' && m.refId === s.id) : [];
   let cat = null;
   const ta = (k, l, ph) => '<label class="lbl">' + l + '</label><textarea class="ta" id="' + k + '" style="min-height:84px" placeholder="' + ph + '">' + esc(v[k] || '') + '</textarea>';
   return {
     html: hdr(s ? 'Edit Surgery' : 'Add Surgery') + wrapPage(
+      '<div class="card tile" style="margin:0 0 4px"><div class="avatar">' + esc(initials(pt.name)) + '</div><div class="grow"><div class="t-name">' + esc(pt.name) + '</div><div class="t-sub"><b>' + esc(pt.uhid) + '</b></div></div></div>' +
       '<label class="lbl" style="margin-top:4px">Procedure <i>*</i></label><div class="chips wrapchips" id="procs">' + PROCEDURES.map(x => '<button type="button" class="chip sm ' + (v.procedure === x ? 'on' : '') + '" data-p="' + esc(x) + '">' + esc(x) + '</button>').join('') + '</div>' +
       '<input class="inp" id="proc" style="margin-top:10px" placeholder="Procedure name (type or pick above)" value="' + esc(v.procedure || '') + '">' +
       '<label class="lbl">Date <i>*</i></label><input class="inp" type="date" id="sdate" value="' + (v.date || iso(today())) + '">' +
+      '<label class="lbl">Duration of surgery (minutes)</label><input class="inp" id="duration" type="number" inputmode="numeric" min="0" max="1440" placeholder="e.g. 90" value="' + esc(v.duration || '') + '"><div class="small" id="durl" style="margin-top:5px">' + esc(fmtDur(v.duration)) + '</div>' +
+      '<label class="lbl">Assistants</label>' + [1, 2, 3].map(n => '<input class="inp" id="assist' + n + '" style="margin-bottom:8px" placeholder="Assistant ' + n + '" value="' + esc(v['assist' + n] || '') + '">').join('') +
       ta('indication', 'Indication', 'Why was it done?') + ta('findings', 'Operative findings', 'Findings') + ta('notes', 'Operative notes', 'Technique, complications') +
       ta('hpe', 'Histopathology (HPE)', 'Report summary') + ta('postop', 'Post-op notes', 'Recovery, catheter, discharge') +
       (media.length ? '<div class="lbl">Attached</div><div class="thumbs" id="sex">' + media.map(m => '<div class="th ' + (m.kind === 'image' ? '' : 'file') + '">' + (m.kind === 'image' && m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '<button class="x red" data-del="' + m.id + '">' + ic('x', 12) + '</button></div>').join('') + '</div>' : '') +
@@ -222,7 +226,7 @@ Views.surgeryForm = async ({ pid, id }) => {
         if (!date) return toast('Date is required');
         const st = Views._sst;
         await withBusy('Saving...', async () => {
-          const sid = await Repo.saveSurgery({ id: s ? s.id : undefined, createdAt: s ? s.createdAt : undefined, patientId: pid, procedure: proc, date, indication: $('#indication').value, findings: $('#findings').value, notes: $('#notes').value, hpe: $('#hpe').value, postop: $('#postop').value });
+          const sid = await Repo.saveSurgery({ id: s ? s.id : undefined, createdAt: s ? s.createdAt : undefined, patientId: pid, procedure: proc, date, duration: $('#duration').value, assist1: $('#assist1').value, assist2: $('#assist2').value, assist3: $('#assist3').value, indication: $('#indication').value, findings: $('#findings').value, notes: $('#notes').value, hpe: $('#hpe').value, postop: $('#postop').value });
           await saveStaged(st, { pid, category: cat || 'Other', takenAt: date, refType: 'surgery', refId: sid, caption: proc });
         });
         toast('Surgery saved'); back();
@@ -231,6 +235,7 @@ Views.surgeryForm = async ({ pid, id }) => {
     },
     bind: root => {
       Views._sst = bindAttach($('#sattach'));
+      $('#duration').oninput = e => { $('#durl').textContent = fmtDur(e.target.value); };
       $('#procs').onclick = e => { const b = e.target.closest('[data-p]'); if (!b) return; $('#proc').value = b.dataset.p; $$('#procs .chip').forEach(x => x.classList.toggle('on', x === b)); };
       $('#scats').onclick = e => { const c = e.target.closest('[data-c]'); if (!c) return; cat = c.dataset.c; $$('#scats .chip').forEach(x => x.classList.toggle('on', x === c)); };
       const ex = $('#sex');
@@ -288,11 +293,38 @@ Views.visitForm = async ({ pid, id }) => {
   };
 };
 
-/* ---------------- all surgeries ---------------- */
+/* ---------------- log book (all surgeries) ---------------- */
+const LSTATE = { q: '' };
+async function logRows() {
+  const l = await Repo.allSurgeries(); const q = LSTATE.q.trim().toLowerCase();
+  return q ? l.filter(s => [s.procedure, s.pname, s.uhid, ...assistants(s)].some(x => x && String(x).toLowerCase().includes(q))) : l;
+}
+const logCard = s => '<div class="card tap" data-act="editLog" data-pid="' + s.patientId + '" data-id="' + s.id + '"><div style="display:flex;gap:10px;align-items:center"><div class="iconbox">' + ic('scalpel', 22) + '</div><div style="flex:1;min-width:0"><div class="t-name" style="white-space:normal">' + esc(s.procedure) + '</div><div class="t-sub" style="white-space:normal"><b>' + esc(s.pname) + '</b><br>' + esc(s.uhid) + '</div></div><div style="text-align:right"><div class="small"><b style="color:var(--navy)">' + fmt(s.date) + '</b></div>' + (s.duration ? '<div class="small">' + fmtDur(s.duration) + '</div>' : '') + '</div></div>' +
+  (assistants(s).length ? '<div class="small" style="margin-top:8px;color:var(--navy)">Assistants: ' + esc(assistants(s).join(', ')) + '</div>' : '') + '</div>';
 Views.allSurgeries = async () => {
-  const l = await Repo.allSurgeries();
+  const all = await Repo.allSurgeries(); const l = await logRows();
+  const tot = all.reduce((a, s) => a + (s.duration || 0), 0);
   return {
-    html: hdr('All Surgeries') + wrapPage(l.length ? l.map(s => '<div class="card tap tile" data-act="open" data-id="' + s.patientId + '"><div class="iconbox">' + ic('scalpel', 22) + '</div><div class="grow"><div class="t-name">' + esc(s.procedure) + '</div><div class="t-sub"><b>' + esc(s.pname) + '</b> &middot; ' + esc(s.uhid) + '</div></div><div class="small">' + fmt(s.date) + '</div></div>').join('') : emptyBox('scalpel', 'No surgeries yet', 'Surgeries you record will be listed here.'))
+    html: hdr('Log Book', { right: '<button class="ib" data-act="csv" aria-label="Export">' + ic('download', 22) + '</button>' }) +
+      '<div class="wrap"><div class="sticky-search"><div class="sch">' + ic('search', 20) + '<input class="inp" id="lq" type="search" placeholder="Search procedure, patient, UHID, assistant" value="' + esc(LSTATE.q) + '"></div></div></div>' +
+      wrapPage('<div class="small" id="lcnt" style="margin:2px 2px 8px">' + l.length + ' of ' + all.length + ' surgeries' + (tot ? ' &middot; ' + fmtDur(tot) + ' operating time' : '') + '</div><div id="llist">' + (l.length ? l.map(logCard).join('') : emptyBox('scalpel', all.length ? 'No matches' : 'Log book is empty', all.length ? 'Try a different search.' : 'Tap the button below to log a surgery.')) + '</div>', true) +
+      '<div class="bar"><div class="in"><button class="btn" data-act="addLog">' + ic('plus', 20) + ' Add Surgery Entry</button></div></div>',
+    acts: {
+      editLog: el => go('surgeryForm', { pid: +el.dataset.pid, id: +el.dataset.id }),
+      csv: async () => { const f = await csvExport('surg'); const r = await shareOrSave(f.blob, f.name); if (r === 'downloaded') toast('Saved to downloads'); await Repo.audit('export', 'csv'); },
+      addLog: async () => {
+        const ps = (await Repo.patients()).sort((a, b) => a.name.localeCompare(b.name));
+        if (!ps.length) return toast('Register a patient first');
+        sheet('<h3>Select patient</h3><div class="sch" style="margin:10px 0"><input class="inp" id="pq" placeholder="Search name or UHID" style="padding-left:14px"></div><div id="pl"></div>', (s, close) => {
+          const draw = () => { const q = $('#pq', s).value.trim().toLowerCase(); $('#pl', s).innerHTML = ps.filter(p => !q || p.name.toLowerCase().includes(q) || p.uhid.toLowerCase().includes(q)).slice(0, 40).map(p => '<div class="mrow" data-p="' + p.id + '" style="padding:12px 4px;border-bottom:1px solid var(--bd)"><div class="avatar" style="width:38px;height:38px;font-size:13px">' + esc(initials(p.name)) + '</div><div class="grow"><div class="t">' + esc(p.name) + '</div><div class="s">' + esc(p.uhid) + '</div></div></div>').join('') || '<div class="small" style="padding:14px;text-align:center">No match</div>'; };
+          draw(); $('#pq', s).oninput = draw;
+          $('#pl', s).onclick = e => { const r = e.target.closest('[data-p]'); if (r) { close(); go('surgeryForm', { pid: +r.dataset.p }); } };
+        });
+      }
+    },
+    bind: () => {
+      $('#lq').oninput = debounce(async e => { LSTATE.q = e.target.value; const l2 = await logRows(); $('#llist').innerHTML = l2.length ? l2.map(logCard).join('') : emptyBox('scalpel', 'No matches', 'Try a different search.'); $('#lcnt').textContent = l2.length + ' of ' + all.length + ' surgeries'; }, 150);
+    }
   };
 };
 
@@ -306,7 +338,7 @@ Views.summary = async ({ id }) => {
     html: hdr('Summary', { right: '<button class="ib noprint" data-act="print" aria-label="Print">' + ic('printer', 22) + '</button>' }) + wrapPage(
       '<div class="card"><h2 style="margin:0 0 4px">' + esc(p.name) + '</h2>' + kv('UHID', p.uhid) + kv('Age / Sex', p.age + ' yrs / ' + p.sex) + kv('Mobile', p.mobile) + kv('Diagnosis', (p.dx || []).map(d => dxLabel(d, p)).join(', ')) + kv('Chief complaints', p.cc) + '</div>' +
       '<div class="sec"><h2>Investigations</h2></div><div class="card">' + (invs.length ? invs.map(i => kv(fmt(i.date) + ' - ' + i.name, i.notes || 'Done')).join('') : '<span class="small">None recorded</span>') + '</div>' +
-      '<div class="sec"><h2>Surgeries</h2></div>' + (ss.length ? ss.map(s => '<div class="card"><b>' + esc(s.procedure) + '</b> <span class="small">' + fmt(s.date) + '</span>' + kv('Indication', s.indication) + kv('Findings', s.findings) + kv('Operative notes', s.notes) + kv('HPE', s.hpe) + kv('Post-op', s.postop) + '</div>').join('') : '<div class="card small">None recorded</div>') +
+      '<div class="sec"><h2>Surgeries</h2></div>' + (ss.length ? ss.map(s => '<div class="card"><b>' + esc(s.procedure) + '</b> <span class="small">' + fmt(s.date) + '</span>' + kv('Duration', fmtDur(s.duration)) + kv('Assistants', assistants(s).join(', ')) + kv('Indication', s.indication) + kv('Findings', s.findings) + kv('Operative notes', s.notes) + kv('HPE', s.hpe) + kv('Post-op', s.postop) + '</div>').join('') : '<div class="card small">None recorded</div>') +
       '<div class="sec"><h2>Follow-up history</h2></div><div class="card">' + (fus.length ? fus.map(f => kv(fmt(f.date) + (f.completed ? '' : ' (scheduled)'), [f.status, f.notes].filter(Boolean).join(' - ') || (f.completed ? 'Visit' : ''))).join('') : '<span class="small">None</span>') + '</div>' +
       (notes.length ? '<div class="sec"><h2>Notes</h2></div><div class="card">' + notes.map(n => kv(fmt(n.createdAt.slice(0, 10)), n.note)).join('') + '</div>' : '') +
       '<div class="small" style="text-align:center;margin-top:16px">Generated ' + fmtDT(new Date().toISOString()) + ' &middot; Dr. ' + esc(a.name.replace(/^dr\.?\s*/i, '')) + ' &middot; UroVault</div>'),

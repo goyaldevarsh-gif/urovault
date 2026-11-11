@@ -64,6 +64,8 @@ function nextDateFor(label, from) {
   }
   return null;
 }
+const fmtDur = m => { m = Number(m); if (!m) return ''; const h = Math.floor(m / 60), r = m % 60; return (h ? h + ' h' : '') + (h && r ? ' ' : '') + (r ? r + ' min' : ''); };
+const assistants = s => [s.assist1, s.assist2, s.assist3].filter(Boolean);
 function greeting() { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; }
 const initials = n => { const p = String(n || '').trim().split(/\s+/).filter(Boolean); return !p.length ? '?' : p.length === 1 ? p[0][0].toUpperCase() : (p[0][0] + p[p.length - 1][0]).toUpperCase(); };
 const uhidKey = u => String(u || '').trim().toUpperCase().replace(/\s+/g, '');
@@ -287,7 +289,8 @@ const Repo = {
   },
   async saveSurgery(s) {
     const rec = Object.assign({}, s);
-    ['indication', 'notes', 'findings', 'hpe', 'postop'].forEach(k => { rec[k] = nn(rec[k]); });
+    ['indication', 'notes', 'findings', 'hpe', 'postop', 'assist1', 'assist2', 'assist3'].forEach(k => { rec[k] = nn(rec[k]); });
+    rec.duration = rec.duration ? Math.max(0, Math.round(Number(rec.duration))) || null : null;
     rec.procedure = rec.procedure.trim();
     if (!rec.id) { rec.createdAt = new Date().toISOString(); delete rec.id; }
     const id = await dbPut('surgeries', rec);
@@ -365,7 +368,7 @@ const Repo = {
     const mk = async (uhid, name, age, sex, cc, dx) => Repo.savePatient({ uhid, name, age, sex, cc, mobile: null, addDx: null, isDemo: true, dx });
     const a = await mk('DEMO/2026/001', 'Demo Patient A', 58, 'Male', 'Hematuria for 2 weeks', [{ name: 'Ca Bladder' }]);
     await Repo.addInv(a, 'RFT', d(-20)); await Repo.addInv(a, 'CBC', d(-20)); await Repo.addInv(a, 'CT', d(-19), 'Sample entry');
-    await Repo.saveSurgery({ patientId: a, procedure: 'TURBT', date: d(-14), indication: 'Ca bladder - diagnostic and therapeutic', notes: 'Sample operative note.', hpe: 'Sample HPE entry' });
+    await Repo.saveSurgery({ patientId: a, procedure: 'TURBT', date: d(-14), duration: 55, assist1: 'Dr. Sample A', assist2: 'Dr. Sample B', indication: 'Ca bladder - diagnostic and therapeutic', notes: 'Sample operative note.', hpe: 'Sample HPE entry' });
     await Repo.saveVisit({ pid: a, date: d(-3), notes: 'Sample follow-up note.', status: 'Stable', nextDate: d(0) });
     const b = await mk('DEMO/2026/002', 'Demo Patient B', 46, 'Male', 'Right flank pain for 1 month', [{ name: 'Renal Stone', lat: 'Right' }]);
     await Repo.addInv(b, 'Urine Analysis', d(-5)); await Repo.schedule(b, d(6));

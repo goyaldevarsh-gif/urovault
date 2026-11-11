@@ -81,12 +81,12 @@ Views.home = async () => {
       '<button class="ib" data-act="searchP" aria-label="Search">' + ic('search', 22) + '</button>' +
       '<button class="ib" data-act="tab" data-v="followups" aria-label="Follow-ups">' + ic('bell', 22) + (c.due ? '<span class="dot">' + c.due + '</span>' : '') + '</button></div>' +
       '<div class="greet">' + greeting() + ',<br>Dr. ' + esc(first) + '</div>' +
-      '<div class="stats">' + stat('tab" data-v="patients', 'users', c.patients, 'Patients') + stat('tab" data-v="followups', 'bell', c.due, 'Follow-ups Due') + stat('allSurg', 'scalpel', c.surgeries, 'Surgeries') + '</div></div></div>' +
+      '<div class="stats">' + stat('tab" data-v="patients', 'users', c.patients, 'Patients') + stat('tab" data-v="followups', 'bell', c.due, 'Follow-ups Due') + stat('allSurg', 'scalpel', c.surgeries, 'Log Book') + '</div></div></div>' +
       wrapPage(
         (needBk ? '<div class="card tap" data-act="goBackup" style="background:var(--ambert);border-color:#FCD34D;display:flex;gap:12px;align-items:center;margin-top:16px">' + ic('alert', 22) + '<div style="flex:1"><b>Back up your data</b><div class="small" style="color:var(--amberd)">' + (bkDays === null ? 'No backup yet. Safari can clear website data.' : 'Last backup ' + bkDays + ' days ago.') + '</div></div>' + ic('chev', 18) + '</div>' : '') +
         '<div class="sec" style="margin-top:20px"><h2>Quick Actions</h2></div><div class="qa">' +
         '<button data-act="newPatient"><div class="iconbox">' + ic('plus', 22) + '</div>New Patient</button>' +
-        '<button data-act="tab" data-v="patients"><div class="iconbox">' + ic('users', 22) + '</div>Patients</button>' +
+        '<button data-act="allSurg"><div class="iconbox">' + ic('scalpel', 22) + '</div>Log Book</button>' +
         '<button data-act="tab" data-v="followups"><div class="iconbox">' + ic('cal', 22) + '</div>Follow-ups</button></div>' +
         '<div class="sec"><h2>Follow-ups Due</h2><button data-act="tab" data-v="followups">View all</button></div>' +
         (due.length ? due.map(fuTile).join('') : '<div class="card small" style="text-align:center;padding:22px">Nothing due. You are all caught up.</div>') +

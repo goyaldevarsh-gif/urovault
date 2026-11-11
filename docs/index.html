@@ -230,7 +230,7 @@ input[type=date].inp{min-height:50px;display:block;text-align:left;-webkit-min-l
 'use strict';
 /* ===================== UroVault PWA - core: utils, icons, db, repo ===================== */
 const APP_VERSION = '1.1.0';
-const BUILD_ID = '20261111065844';
+const BUILD_ID = '20261111070107';
 const COPYRIGHT = '&copy; 2026 Dr. Devarsh Goyal. All rights reserved.';
 const copyFoot = () => '<div class="small" style="text-align:center;margin:22px 0 4px;opacity:.85">' + COPYRIGHT + '<br>UroVault v' + APP_VERSION + '</div>';
 
@@ -293,6 +293,8 @@ function nextDateFor(label, from) {
   }
   return null;
 }
+const fmtDur = m => { m = Number(m); if (!m) return ''; const h = Math.floor(m / 60), r = m % 60; return (h ? h + ' h' : '') + (h && r ? ' ' : '') + (r ? r + ' min' : ''); };
+const assistants = s => [s.assist1, s.assist2, s.assist3].filter(Boolean);
 function greeting() { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; }
 const initials = n => { const p = String(n || '').trim().split(/\s+/).filter(Boolean); return !p.length ? '?' : p.length === 1 ? p[0][0].toUpperCase() : (p[0][0] + p[p.length - 1][0]).toUpperCase(); };
 const uhidKey = u => String(u || '').trim().toUpperCase().replace(/\s+/g, '');
@@ -516,7 +518,8 @@ const Repo = {
   },
   async saveSurgery(s) {
     const rec = Object.assign({}, s);
-    ['indication', 'notes', 'findings', 'hpe', 'postop'].forEach(k => { rec[k] = nn(rec[k]); });
+    ['indication', 'notes', 'findings', 'hpe', 'postop', 'assist1', 'assist2', 'assist3'].forEach(k => { rec[k] = nn(rec[k]); });
+    rec.duration = rec.duration ? Math.max(0, Math.round(Number(rec.duration))) || null : null;
     rec.procedure = rec.procedure.trim();
     if (!rec.id) { rec.createdAt = new Date().toISOString(); delete rec.id; }
     const id = await dbPut('surgeries', rec);
@@ -594,7 +597,7 @@ const Repo = {
     const mk = async (uhid, name, age, sex, cc, dx) => Repo.savePatient({ uhid, name, age, sex, cc, mobile: null, addDx: null, isDemo: true, dx });
     const a = await mk('DEMO/2026/001', 'Demo Patient A', 58, 'Male', 'Hematuria for 2 weeks', [{ name: 'Ca Bladder' }]);
     await Repo.addInv(a, 'RFT', d(-20)); await Repo.addInv(a, 'CBC', d(-20)); await Repo.addInv(a, 'CT', d(-19), 'Sample entry');
-    await Repo.saveSurgery({ patientId: a, procedure: 'TURBT', date: d(-14), indication: 'Ca bladder - diagnostic and therapeutic', notes: 'Sample operative note.', hpe: 'Sample HPE entry' });
+    await Repo.saveSurgery({ patientId: a, procedure: 'TURBT', date: d(-14), duration: 55, assist1: 'Dr. Sample A', assist2: 'Dr. Sample B', indication: 'Ca bladder - diagnostic and therapeutic', notes: 'Sample operative note.', hpe: 'Sample HPE entry' });
     await Repo.saveVisit({ pid: a, date: d(-3), notes: 'Sample follow-up note.', status: 'Stable', nextDate: d(0) });
     const b = await mk('DEMO/2026/002', 'Demo Patient B', 46, 'Male', 'Right flank pain for 1 month', [{ name: 'Renal Stone', lat: 'Right' }]);
     await Repo.addInv(b, 'Urine Analysis', d(-5)); await Repo.schedule(b, d(6));
@@ -1028,12 +1031,12 @@ Views.home = async () => {
       '<button class="ib" data-act="searchP" aria-label="Search">' + ic('search', 22) + '</button>' +
       '<button class="ib" data-act="tab" data-v="followups" aria-label="Follow-ups">' + ic('bell', 22) + (c.due ? '<span class="dot">' + c.due + '</span>' : '') + '</button></div>' +
       '<div class="greet">' + greeting() + ',<br>Dr. ' + esc(first) + '</div>' +
-      '<div class="stats">' + stat('tab" data-v="patients', 'users', c.patients, 'Patients') + stat('tab" data-v="followups', 'bell', c.due, 'Follow-ups Due') + stat('allSurg', 'scalpel', c.surgeries, 'Surgeries') + '</div></div></div>' +
+      '<div class="stats">' + stat('tab" data-v="patients', 'users', c.patients, 'Patients') + stat('tab" data-v="followups', 'bell', c.due, 'Follow-ups Due') + stat('allSurg', 'scalpel', c.surgeries, 'Log Book') + '</div></div></div>' +
       wrapPage(
         (needBk ? '<div class="card tap" data-act="goBackup" style="background:var(--ambert);border-color:#FCD34D;display:flex;gap:12px;align-items:center;margin-top:16px">' + ic('alert', 22) + '<div style="flex:1"><b>Back up your data</b><div class="small" style="color:var(--amberd)">' + (bkDays === null ? 'No backup yet. Safari can clear website data.' : 'Last backup ' + bkDays + ' days ago.') + '</div></div>' + ic('chev', 18) + '</div>' : '') +
         '<div class="sec" style="margin-top:20px"><h2>Quick Actions</h2></div><div class="qa">' +
         '<button data-act="newPatient"><div class="iconbox">' + ic('plus', 22) + '</div>New Patient</button>' +
-        '<button data-act="tab" data-v="patients"><div class="iconbox">' + ic('users', 22) + '</div>Patients</button>' +
+        '<button data-act="allSurg"><div class="iconbox">' + ic('scalpel', 22) + '</div>Log Book</button>' +
         '<button data-act="tab" data-v="followups"><div class="iconbox">' + ic('cal', 22) + '</div>Follow-ups</button></div>' +
         '<div class="sec"><h2>Follow-ups Due</h2><button data-act="tab" data-v="followups">View all</button></div>' +
         (due.length ? due.map(fuTile).join('') : '<div class="card small" style="text-align:center;padding:22px">Nothing due. You are all caught up.</div>') +
@@ -1250,7 +1253,7 @@ Views.profile = async (params) => {
       const att = media.filter(m => m.refType === 'surgery' && m.refId === s.id);
       return '<div class="card tap" data-act="editSurg" data-id="' + s.id + '"><div style="display:flex;gap:10px;align-items:center"><div class="iconbox">' + ic('scalpel', 22) + '</div><div style="flex:1;min-width:0"><div class="t-name" style="white-space:normal">' + esc(s.procedure) + '</div><div class="t-sub">' + fmt(s.date) + '</div></div>' + ic('chev', 18) + '</div>' +
         (s.indication ? '<div class="small" style="margin-top:8px;color:var(--navy)">' + esc(s.indication) + '</div>' : '') +
-        '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' + (s.hpe ? '<span class="pill">HPE</span>' : '') + (s.postop ? '<span class="pill grey">Post-op notes</span>' : '') + (att.length ? '<span class="pill grey">' + att.length + ' attachment' + (att.length > 1 ? 's' : '') + '</span>' : '') + '</div></div>';
+        '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' + (s.duration ? '<span class="pill grey">' + fmtDur(s.duration) + '</span>' : '') + (assistants(s).length ? '<span class="pill grey">Asst: ' + esc(assistants(s).join(', ')) + '</span>' : '') + (s.hpe ? '<span class="pill">HPE</span>' : '') + (s.postop ? '<span class="pill grey">Post-op notes</span>' : '') + (att.length ? '<span class="pill grey">' + att.length + ' attachment' + (att.length > 1 ? 's' : '') + '</span>' : '') + '</div></div>';
     }).join('') : emptyBox('scalpel', 'No surgeries recorded', 'Add the procedure, findings and histopathology.'));
   }
   async function fuTab() {
@@ -1388,15 +1391,19 @@ async function invSheet(pid, o, done) {
 /* ---------------- surgery form ---------------- */
 Views.surgeryForm = async ({ pid, id }) => {
   const s = id ? await dbGet('surgeries', id) : null;
+  const pt = await Repo.patient(pid);
   const v = s || {};
   const media = s ? (await Repo.media(pid)).filter(m => m.refType === 'surgery' && m.refId === s.id) : [];
   let cat = null;
   const ta = (k, l, ph) => '<label class="lbl">' + l + '</label><textarea class="ta" id="' + k + '" style="min-height:84px" placeholder="' + ph + '">' + esc(v[k] || '') + '</textarea>';
   return {
     html: hdr(s ? 'Edit Surgery' : 'Add Surgery') + wrapPage(
+      '<div class="card tile" style="margin:0 0 4px"><div class="avatar">' + esc(initials(pt.name)) + '</div><div class="grow"><div class="t-name">' + esc(pt.name) + '</div><div class="t-sub"><b>' + esc(pt.uhid) + '</b></div></div></div>' +
       '<label class="lbl" style="margin-top:4px">Procedure <i>*</i></label><div class="chips wrapchips" id="procs">' + PROCEDURES.map(x => '<button type="button" class="chip sm ' + (v.procedure === x ? 'on' : '') + '" data-p="' + esc(x) + '">' + esc(x) + '</button>').join('') + '</div>' +
       '<input class="inp" id="proc" style="margin-top:10px" placeholder="Procedure name (type or pick above)" value="' + esc(v.procedure || '') + '">' +
       '<label class="lbl">Date <i>*</i></label><input class="inp" type="date" id="sdate" value="' + (v.date || iso(today())) + '">' +
+      '<label class="lbl">Duration of surgery (minutes)</label><input class="inp" id="duration" type="number" inputmode="numeric" min="0" max="1440" placeholder="e.g. 90" value="' + esc(v.duration || '') + '"><div class="small" id="durl" style="margin-top:5px">' + esc(fmtDur(v.duration)) + '</div>' +
+      '<label class="lbl">Assistants</label>' + [1, 2, 3].map(n => '<input class="inp" id="assist' + n + '" style="margin-bottom:8px" placeholder="Assistant ' + n + '" value="' + esc(v['assist' + n] || '') + '">').join('') +
       ta('indication', 'Indication', 'Why was it done?') + ta('findings', 'Operative findings', 'Findings') + ta('notes', 'Operative notes', 'Technique, complications') +
       ta('hpe', 'Histopathology (HPE)', 'Report summary') + ta('postop', 'Post-op notes', 'Recovery, catheter, discharge') +
       (media.length ? '<div class="lbl">Attached</div><div class="thumbs" id="sex">' + media.map(m => '<div class="th ' + (m.kind === 'image' ? '' : 'file') + '">' + (m.kind === 'image' && m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '<button class="x red" data-del="' + m.id + '">' + ic('x', 12) + '</button></div>').join('') + '</div>' : '') +
@@ -1410,7 +1417,7 @@ Views.surgeryForm = async ({ pid, id }) => {
         if (!date) return toast('Date is required');
         const st = Views._sst;
         await withBusy('Saving...', async () => {
-          const sid = await Repo.saveSurgery({ id: s ? s.id : undefined, createdAt: s ? s.createdAt : undefined, patientId: pid, procedure: proc, date, indication: $('#indication').value, findings: $('#findings').value, notes: $('#notes').value, hpe: $('#hpe').value, postop: $('#postop').value });
+          const sid = await Repo.saveSurgery({ id: s ? s.id : undefined, createdAt: s ? s.createdAt : undefined, patientId: pid, procedure: proc, date, duration: $('#duration').value, assist1: $('#assist1').value, assist2: $('#assist2').value, assist3: $('#assist3').value, indication: $('#indication').value, findings: $('#findings').value, notes: $('#notes').value, hpe: $('#hpe').value, postop: $('#postop').value });
           await saveStaged(st, { pid, category: cat || 'Other', takenAt: date, refType: 'surgery', refId: sid, caption: proc });
         });
         toast('Surgery saved'); back();
@@ -1419,6 +1426,7 @@ Views.surgeryForm = async ({ pid, id }) => {
     },
     bind: root => {
       Views._sst = bindAttach($('#sattach'));
+      $('#duration').oninput = e => { $('#durl').textContent = fmtDur(e.target.value); };
       $('#procs').onclick = e => { const b = e.target.closest('[data-p]'); if (!b) return; $('#proc').value = b.dataset.p; $$('#procs .chip').forEach(x => x.classList.toggle('on', x === b)); };
       $('#scats').onclick = e => { const c = e.target.closest('[data-c]'); if (!c) return; cat = c.dataset.c; $$('#scats .chip').forEach(x => x.classList.toggle('on', x === c)); };
       const ex = $('#sex');
@@ -1476,11 +1484,38 @@ Views.visitForm = async ({ pid, id }) => {
   };
 };
 
-/* ---------------- all surgeries ---------------- */
+/* ---------------- log book (all surgeries) ---------------- */
+const LSTATE = { q: '' };
+async function logRows() {
+  const l = await Repo.allSurgeries(); const q = LSTATE.q.trim().toLowerCase();
+  return q ? l.filter(s => [s.procedure, s.pname, s.uhid, ...assistants(s)].some(x => x && String(x).toLowerCase().includes(q))) : l;
+}
+const logCard = s => '<div class="card tap" data-act="editLog" data-pid="' + s.patientId + '" data-id="' + s.id + '"><div style="display:flex;gap:10px;align-items:center"><div class="iconbox">' + ic('scalpel', 22) + '</div><div style="flex:1;min-width:0"><div class="t-name" style="white-space:normal">' + esc(s.procedure) + '</div><div class="t-sub" style="white-space:normal"><b>' + esc(s.pname) + '</b><br>' + esc(s.uhid) + '</div></div><div style="text-align:right"><div class="small"><b style="color:var(--navy)">' + fmt(s.date) + '</b></div>' + (s.duration ? '<div class="small">' + fmtDur(s.duration) + '</div>' : '') + '</div></div>' +
+  (assistants(s).length ? '<div class="small" style="margin-top:8px;color:var(--navy)">Assistants: ' + esc(assistants(s).join(', ')) + '</div>' : '') + '</div>';
 Views.allSurgeries = async () => {
-  const l = await Repo.allSurgeries();
+  const all = await Repo.allSurgeries(); const l = await logRows();
+  const tot = all.reduce((a, s) => a + (s.duration || 0), 0);
   return {
-    html: hdr('All Surgeries') + wrapPage(l.length ? l.map(s => '<div class="card tap tile" data-act="open" data-id="' + s.patientId + '"><div class="iconbox">' + ic('scalpel', 22) + '</div><div class="grow"><div class="t-name">' + esc(s.procedure) + '</div><div class="t-sub"><b>' + esc(s.pname) + '</b> &middot; ' + esc(s.uhid) + '</div></div><div class="small">' + fmt(s.date) + '</div></div>').join('') : emptyBox('scalpel', 'No surgeries yet', 'Surgeries you record will be listed here.'))
+    html: hdr('Log Book', { right: '<button class="ib" data-act="csv" aria-label="Export">' + ic('download', 22) + '</button>' }) +
+      '<div class="wrap"><div class="sticky-search"><div class="sch">' + ic('search', 20) + '<input class="inp" id="lq" type="search" placeholder="Search procedure, patient, UHID, assistant" value="' + esc(LSTATE.q) + '"></div></div></div>' +
+      wrapPage('<div class="small" id="lcnt" style="margin:2px 2px 8px">' + l.length + ' of ' + all.length + ' surgeries' + (tot ? ' &middot; ' + fmtDur(tot) + ' operating time' : '') + '</div><div id="llist">' + (l.length ? l.map(logCard).join('') : emptyBox('scalpel', all.length ? 'No matches' : 'Log book is empty', all.length ? 'Try a different search.' : 'Tap the button below to log a surgery.')) + '</div>', true) +
+      '<div class="bar"><div class="in"><button class="btn" data-act="addLog">' + ic('plus', 20) + ' Add Surgery Entry</button></div></div>',
+    acts: {
+      editLog: el => go('surgeryForm', { pid: +el.dataset.pid, id: +el.dataset.id }),
+      csv: async () => { const f = await csvExport('surg'); const r = await shareOrSave(f.blob, f.name); if (r === 'downloaded') toast('Saved to downloads'); await Repo.audit('export', 'csv'); },
+      addLog: async () => {
+        const ps = (await Repo.patients()).sort((a, b) => a.name.localeCompare(b.name));
+        if (!ps.length) return toast('Register a patient first');
+        sheet('<h3>Select patient</h3><div class="sch" style="margin:10px 0"><input class="inp" id="pq" placeholder="Search name or UHID" style="padding-left:14px"></div><div id="pl"></div>', (s, close) => {
+          const draw = () => { const q = $('#pq', s).value.trim().toLowerCase(); $('#pl', s).innerHTML = ps.filter(p => !q || p.name.toLowerCase().includes(q) || p.uhid.toLowerCase().includes(q)).slice(0, 40).map(p => '<div class="mrow" data-p="' + p.id + '" style="padding:12px 4px;border-bottom:1px solid var(--bd)"><div class="avatar" style="width:38px;height:38px;font-size:13px">' + esc(initials(p.name)) + '</div><div class="grow"><div class="t">' + esc(p.name) + '</div><div class="s">' + esc(p.uhid) + '</div></div></div>').join('') || '<div class="small" style="padding:14px;text-align:center">No match</div>'; };
+          draw(); $('#pq', s).oninput = draw;
+          $('#pl', s).onclick = e => { const r = e.target.closest('[data-p]'); if (r) { close(); go('surgeryForm', { pid: +r.dataset.p }); } };
+        });
+      }
+    },
+    bind: () => {
+      $('#lq').oninput = debounce(async e => { LSTATE.q = e.target.value; const l2 = await logRows(); $('#llist').innerHTML = l2.length ? l2.map(logCard).join('') : emptyBox('scalpel', 'No matches', 'Try a different search.'); $('#lcnt').textContent = l2.length + ' of ' + all.length + ' surgeries'; }, 150);
+    }
   };
 };
 
@@ -1494,7 +1529,7 @@ Views.summary = async ({ id }) => {
     html: hdr('Summary', { right: '<button class="ib noprint" data-act="print" aria-label="Print">' + ic('printer', 22) + '</button>' }) + wrapPage(
       '<div class="card"><h2 style="margin:0 0 4px">' + esc(p.name) + '</h2>' + kv('UHID', p.uhid) + kv('Age / Sex', p.age + ' yrs / ' + p.sex) + kv('Mobile', p.mobile) + kv('Diagnosis', (p.dx || []).map(d => dxLabel(d, p)).join(', ')) + kv('Chief complaints', p.cc) + '</div>' +
       '<div class="sec"><h2>Investigations</h2></div><div class="card">' + (invs.length ? invs.map(i => kv(fmt(i.date) + ' - ' + i.name, i.notes || 'Done')).join('') : '<span class="small">None recorded</span>') + '</div>' +
-      '<div class="sec"><h2>Surgeries</h2></div>' + (ss.length ? ss.map(s => '<div class="card"><b>' + esc(s.procedure) + '</b> <span class="small">' + fmt(s.date) + '</span>' + kv('Indication', s.indication) + kv('Findings', s.findings) + kv('Operative notes', s.notes) + kv('HPE', s.hpe) + kv('Post-op', s.postop) + '</div>').join('') : '<div class="card small">None recorded</div>') +
+      '<div class="sec"><h2>Surgeries</h2></div>' + (ss.length ? ss.map(s => '<div class="card"><b>' + esc(s.procedure) + '</b> <span class="small">' + fmt(s.date) + '</span>' + kv('Duration', fmtDur(s.duration)) + kv('Assistants', assistants(s).join(', ')) + kv('Indication', s.indication) + kv('Findings', s.findings) + kv('Operative notes', s.notes) + kv('HPE', s.hpe) + kv('Post-op', s.postop) + '</div>').join('') : '<div class="card small">None recorded</div>') +
       '<div class="sec"><h2>Follow-up history</h2></div><div class="card">' + (fus.length ? fus.map(f => kv(fmt(f.date) + (f.completed ? '' : ' (scheduled)'), [f.status, f.notes].filter(Boolean).join(' - ') || (f.completed ? 'Visit' : ''))).join('') : '<span class="small">None</span>') + '</div>' +
       (notes.length ? '<div class="sec"><h2>Notes</h2></div><div class="card">' + notes.map(n => kv(fmt(n.createdAt.slice(0, 10)), n.note)).join('') + '</div>' : '') +
       '<div class="small" style="text-align:center;margin-top:16px">Generated ' + fmtDT(new Date().toISOString()) + ' &middot; Dr. ' + esc(a.name.replace(/^dr\.?\s*/i, '')) + ' &middot; UroVault</div>'),
@@ -1512,12 +1547,12 @@ Views.more = async () => {
     html: hdr('More', { back: false }) + wrapPage(
       '<div class="card phead" data-act="doctor" style="cursor:pointer"><div class="avatar lg">' + esc(initials(a.name.replace(/^dr\.?\s*/i, ''))) + '</div><div style="flex:1;min-width:0"><div class="t-name" style="font-size:17px">' + esc(a.name) + '</div><div class="t-sub">' + esc(a.id) + '</div></div>' + ic('chev', 18) + '</div>' +
       '<div style="height:6px"></div>' +
-      mrow('stats', 'bars', 'Statistics', 'Practice overview') + mrow('reports', 'download', 'Reports &amp; Export', 'CSV files, printable lists') +
+      mrow('logbook', 'scalpel', 'Log Book', 'All surgeries, duration, assistants') + mrow('stats', 'bars', 'Statistics', 'Practice overview') + mrow('reports', 'download', 'Reports &amp; Export', 'CSV files, printable lists') +
       mrow('backup', 'shield', 'Backup &amp; Restore', 'Keep your data safe') + mrow('settings', 'sliders', 'Settings', 'Lock, sample data, storage') +
       mrow('privacy', 'lock', 'Privacy &amp; Security', 'How your data is handled') + mrow('help', 'help', 'Help &amp; About', 'Version ' + APP_VERSION) + mrow('upd', 'refresh', UPDATE_AVAILABLE ? 'Update available' : 'Check for updates', UPDATE_AVAILABLE ? 'Tap to install the new version' : 'You are on v' + APP_VERSION) +
       '<div style="height:8px"></div><button class="btn o" data-act="lock">' + ic('lock', 18) + ' Lock now</button>' + copyFoot(), true) + navbar('more'),
     acts: {
-      doctor: () => go('doctor'), stats: () => go('stats'), reports: () => go('reports'), backup: () => go('backup'),
+      doctor: () => go('doctor'), logbook: () => go('allSurgeries'), stats: () => go('stats'), reports: () => go('reports'), backup: () => go('backup'),
       settings: () => go('settings'), privacy: () => go('privacy'), help: () => go('help'), lock: () => lockNow(), upd: async () => { if (UPDATE_AVAILABLE || await checkUpdate(true)) { if (await confirmDlg('Install update?', 'The app will reload. Your data stays safe.', 'Update')) applyUpdate(); } }
     }
   };
@@ -1554,14 +1589,14 @@ async function csvExport(kind) {
     name = 'urovault-followups'; rows = [['UHID', 'Name', 'Date', 'Type', 'Status', 'Notes', 'Next planned']];
     (await Repo.allFus()).sort((a, b) => a.date.localeCompare(b.date)).forEach(f => rows.push([f.uhid, f.pname, f.date, f.completed ? 'Visit' : 'Scheduled', f.status || '', f.notes || '', f.nextDate || '']));
   } else {
-    name = 'urovault-surgeries'; rows = [['UHID', 'Name', 'Date', 'Procedure', 'Indication', 'Findings', 'Operative notes', 'HPE', 'Post-op']];
-    (await Repo.allSurgeries()).forEach(s => rows.push([s.uhid, s.pname, s.date, s.procedure, s.indication || '', s.findings || '', s.notes || '', s.hpe || '', s.postop || '']));
+    name = 'urovault-surgeries'; rows = [['UHID', 'Patient name', 'Date of surgery', 'Duration (min)', 'Name of surgery', 'Assistant 1', 'Assistant 2', 'Assistant 3', 'Indication', 'Findings', 'Operative notes', 'HPE', 'Post-op']];
+    (await Repo.allSurgeries()).forEach(s => rows.push([s.uhid, s.pname, s.date, s.duration || '', s.procedure, s.assist1 || '', s.assist2 || '', s.assist3 || '', s.indication || '', s.findings || '', s.notes || '', s.hpe || '', s.postop || '']));
   }
   return { blob: new Blob(['﻿' + rows.map(r => r.map(csvCell).join(',')).join('\r\n')], { type: 'text/csv' }), name: name + '-' + iso(today()) + '.csv' };
 }
 Views.reports = async () => ({
   html: hdr('Reports & Export') + wrapPage('<div class="small" style="margin:2px 2px 10px">CSV files open in Excel, Numbers or Sheets. They contain patient identifiers - share carefully.</div>' +
-    mrow('csv_patients', 'users', 'Patient list (CSV)') + mrow('csv_fu', 'cal', 'Follow-ups (CSV)') + mrow('csv_surg', 'scalpel', 'Surgery log (CSV)') + mrow('printList', 'printer', 'Print patient list', 'Opens the print dialog / save as PDF')),
+    mrow('csv_patients', 'users', 'Patient list (CSV)') + mrow('csv_fu', 'cal', 'Follow-ups (CSV)') + mrow('csv_surg', 'scalpel', 'Log book (CSV)') + mrow('printList', 'printer', 'Print patient list', 'Opens the print dialog / save as PDF')),
   acts: {
     csv_patients: async () => { const f = await csvExport('patients'); const r = await shareOrSave(f.blob, f.name); if (r === 'downloaded') toast('Saved to downloads'); await Repo.audit('export', 'csv'); },
     csv_fu: async () => { const f = await csvExport('fu'); const r = await shareOrSave(f.blob, f.name); if (r === 'downloaded') toast('Saved to downloads'); await Repo.audit('export', 'csv'); },
