@@ -233,3 +233,7 @@ input[type=date].inp{min-height:50px;display:block;text-align:left;-webkit-min-l
 
 .updbar{position:fixed;left:12px;right:12px;bottom:calc(74px + var(--sab));z-index:40;max-width:616px;margin:0 auto;background:var(--navy);color:#fff;border-radius:14px;padding:10px 10px 10px 16px;display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px;box-shadow:0 8px 24px rgba(15,41,66,.35)}
 .updbar span{flex:1}.updbar button{border:0;background:var(--teal);color:#fff;font-weight:700;border-radius:10px;height:38px;padding:0 16px;font-size:14px}
+
+.qa.q4{grid-template-columns:repeat(4,1fr);gap:8px}.qa.q4 button{padding:14px 2px 10px;font-size:11.5px}.qa.q4 .iconbox{width:40px;height:40px;border-radius:12px}
+
+.dhead .brand{display:flex;align-items:center;gap:10px;min-width:0}.dhead .brand .bn{font-size:19px;font-weight:700;line-height:1.1}.dhead .brand .bt{font-size:10.5px;opacity:.8;font-weight:500;letter-spacing:.2px;white-space:nowrap}

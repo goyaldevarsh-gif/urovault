@@ -9,12 +9,12 @@ Views.more = async () => {
     html: hdr('More', { back: false }) + wrapPage(
       '<div class="card phead" data-act="doctor" style="cursor:pointer"><div class="avatar lg">' + esc(initials(a.name.replace(/^dr\.?\s*/i, ''))) + '</div><div style="flex:1;min-width:0"><div class="t-name" style="font-size:17px">' + esc(a.name) + '</div><div class="t-sub">' + esc(a.id) + '</div></div>' + ic('chev', 18) + '</div>' +
       '<div style="height:6px"></div>' +
-      mrow('logbook', 'book', 'Log Book', 'All surgeries, duration, assistants') + mrow('stats', 'bars', 'Statistics', 'Practice overview') + mrow('reports', 'download', 'Reports &amp; Export', 'CSV files, printable lists') +
+      mrow('logbook', 'book', 'Log Book', 'All surgeries, duration, assistants') + mrow('caseSeries', 'file', 'Case Series (Excel)', 'Export cases for presentations') + mrow('stats', 'bars', 'Statistics', 'Practice overview') + mrow('reports', 'download', 'Reports &amp; Export', 'CSV files, printable lists') +
       mrow('backup', 'shield', 'Backup &amp; Restore', 'Keep your data safe') + mrow('settings', 'sliders', 'Settings', 'Lock, sample data, storage') +
       mrow('privacy', 'lock', 'Privacy &amp; Security', 'How your data is handled') + mrow('help', 'help', 'Help &amp; About', 'Version ' + APP_VERSION) + mrow('upd', 'refresh', UPDATE_AVAILABLE ? 'Update available' : 'Check for updates', UPDATE_AVAILABLE ? 'Tap to install the new version' : 'You are on v' + APP_VERSION) +
       '<div style="height:8px"></div><button class="btn o" data-act="lock">' + ic('lock', 18) + ' Lock now</button>' + copyFoot(), true) + navbar('more'),
     acts: {
-      doctor: () => go('doctor'), logbook: () => go('allSurgeries'), stats: () => go('stats'), reports: () => go('reports'), backup: () => go('backup'),
+      doctor: () => go('doctor'), caseSeries: () => go('caseSeries'), logbook: () => go('allSurgeries'), stats: () => go('stats'), reports: () => go('reports'), backup: () => go('backup'),
       settings: () => go('settings'), privacy: () => go('privacy'), help: () => go('help'), lock: () => lockNow(), upd: async () => { if (UPDATE_AVAILABLE || await checkUpdate(true)) { if (await confirmDlg('Install update?', 'The app will reload. Your data stays safe.', 'Update')) applyUpdate(); } }
     }
   };
@@ -58,11 +58,12 @@ async function csvExport(kind) {
 }
 Views.reports = async () => ({
   html: hdr('Reports & Export') + wrapPage('<div class="small" style="margin:2px 2px 10px">CSV files open in Excel, Numbers or Sheets. They contain patient identifiers - share carefully.</div>' +
-    mrow('csv_patients', 'users', 'Patient list (CSV)') + mrow('csv_fu', 'cal', 'Follow-ups (CSV)') + mrow('csv_surg', 'scalpel', 'Log book (CSV)') + mrow('printList', 'printer', 'Print patient list', 'Opens the print dialog / save as PDF')),
+    mrow('caseSeries', 'file', 'Case series (Excel)', 'One row per case, all details') + mrow('csv_patients', 'users', 'Patient list (CSV)') + mrow('csv_fu', 'cal', 'Follow-ups (CSV)') + mrow('csv_surg', 'scalpel', 'Log book (CSV)') + mrow('printList', 'printer', 'Print patient list', 'Opens the print dialog / save as PDF')),
   acts: {
     csv_patients: async () => { const f = await csvExport('patients'); const r = await shareOrSave(f.blob, f.name); if (r === 'downloaded') toast('Saved to downloads'); await Repo.audit('export', 'csv'); },
     csv_fu: async () => { const f = await csvExport('fu'); const r = await shareOrSave(f.blob, f.name); if (r === 'downloaded') toast('Saved to downloads'); await Repo.audit('export', 'csv'); },
     csv_surg: async () => { const f = await csvExport('surg'); const r = await shareOrSave(f.blob, f.name); if (r === 'downloaded') toast('Saved to downloads'); await Repo.audit('export', 'csv'); },
+    caseSeries: () => go('caseSeries'),
     printList: () => go('printList')
   }
 });

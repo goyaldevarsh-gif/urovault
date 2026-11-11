@@ -77,17 +77,18 @@ Views.home = async () => {
   const needBk = ps.length > 0 && (bkDays === null || bkDays >= 7);
   const stat = (act, icn, n, l) => '<button class="stat" data-act="' + act + '">' + ic(icn, 20) + '<div class="n">' + n + '</div><div class="l">' + l + '</div></button>';
   return {
-    html: '<div class="dhead"><div class="in"><div class="top"><div class="brand">UroVault</div>' +
+    html: '<div class="dhead"><div class="in"><div class="top"><div class="brand">' + LOGO(true, 38) + '<div><div class="bn">UroVault</div><div class="bt">Your Urology Practice, Organised.</div></div></div>' +
       '<button class="ib" data-act="searchP" aria-label="Search">' + ic('search', 22) + '</button>' +
       '<button class="ib" data-act="tab" data-v="followups" aria-label="Follow-ups">' + ic('bell', 22) + (c.due ? '<span class="dot">' + c.due + '</span>' : '') + '</button></div>' +
       '<div class="greet">' + greeting() + ',<br>Dr. ' + esc(first) + '</div>' +
       '<div class="stats">' + stat('tab" data-v="patients', 'users', c.patients, 'Patients') + stat('tab" data-v="followups', 'bell', c.due, 'Follow-ups Due') + stat('allSurg', 'book', c.surgeries, 'Log Book') + '</div></div></div>' +
       wrapPage(
         (needBk ? '<div class="card tap" data-act="goBackup" style="background:var(--ambert);border-color:#FCD34D;display:flex;gap:12px;align-items:center;margin-top:16px">' + ic('alert', 22) + '<div style="flex:1"><b>Back up your data</b><div class="small" style="color:var(--amberd)">' + (bkDays === null ? 'No backup yet. Safari can clear website data.' : 'Last backup ' + bkDays + ' days ago.') + '</div></div>' + ic('chev', 18) + '</div>' : '') +
-        '<div class="sec" style="margin-top:20px"><h2>Quick Actions</h2></div><div class="qa">' +
+        '<div class="sec" style="margin-top:20px"><h2>Quick Actions</h2></div><div class="qa q4">' +
         '<button data-act="newPatient"><div class="iconbox">' + ic('plus', 22) + '</div>New Patient</button>' +
         '<button data-act="allSurg"><div class="iconbox">' + ic('book', 22) + '</div>Log Book</button>' +
-        '<button data-act="tab" data-v="followups"><div class="iconbox">' + ic('cal', 22) + '</div>Follow-ups</button></div>' +
+        '<button data-act="tab" data-v="followups"><div class="iconbox">' + ic('cal', 22) + '</div>Follow-ups</button>' +
+        '<button data-act="caseSeries"><div class="iconbox">' + ic('file', 22) + '</div>Case Series</button></div>' +
         '<div class="sec"><h2>Follow-ups Due</h2><button data-act="tab" data-v="followups">View all</button></div>' +
         (due.length ? due.map(fuTile).join('') : '<div class="card small" style="text-align:center;padding:22px">Nothing due. You are all caught up.</div>') +
         '<div class="sec"><h2>Recent Patients</h2><button data-act="tab" data-v="patients">View all</button></div>' +
