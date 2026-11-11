@@ -277,7 +277,7 @@ function aiPayload(p, kind, a, r) {
 async function aiReview(text, key, model, prov) {
   const sys = 'You are a urology decision-support assistant for a resident doctor. You get de-identified clinical inputs and a rule-based EAU 2026 summary. Reply in concise English with three short headed lists: (1) Possible inconsistencies or data-entry doubts, (2) Missing information that could change management, (3) Questions to ask or investigations to consider. Base advice only on established EAU guideline principles, do not invent recommendations or numbers, say when unsure. The final decision rests with the treating doctor.';
   if (prov === 'gemini') {
-    const m = model || 'gemini-2.5-flash';
+    const m = (!model || model === 'gemini-2.5-flash') ? 'gemini-3.8-flash' : model;
     const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(m) + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify({ systemInstruction: { parts: [{ text: sys }] }, contents: [{ role: 'user', parts: [{ text }] }], generationConfig: { maxOutputTokens: 1200 } }) });
     const j = await r.json();
     if (!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status));
