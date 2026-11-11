@@ -22,19 +22,19 @@ Views.signup = async () => ({
   html: '<div class="auth"><div class="in"><div class="logo">' + LOGO(false, 64) + '</div><h1 style="margin-top:8px">Create your account</h1><div class="sub2">Stored only on this device</div>' +
     '<label class="lbl" style="margin-top:0">Full name <i>*</i></label><input class="inp" id="sn" placeholder="Dr. Full Name" autocomplete="name">' +
     '<label class="lbl">Email or username <i>*</i></label><input class="inp" id="si" autocapitalize="none" autocomplete="username" placeholder="you@example.com">' +
-    '<label class="lbl">Password <i>*</i></label><div class="pwrap"><input class="inp" id="sp" type="password" autocomplete="new-password" placeholder="At least 6 characters"><button type="button" data-act="eye">' + ic('eye', 20) + '</button></div>' +
+    '<label class="lbl">Password <i>*</i></label><div class="pwrap"><input class="inp" id="sp" type="password" autocomplete="new-password" placeholder="At least 8 characters"><button type="button" data-act="eye">' + ic('eye', 20) + '</button></div>' +
     '<label class="lbl">Confirm password <i>*</i></label><input class="inp" id="sp2" type="password" autocomplete="new-password">' +
     '<div class="ferr" id="serr"></div><div style="height:18px"></div><button class="btn" data-act="create">Create Account</button>' +
-    '<p class="small" style="text-align:center;margin-top:14px">There is no password recovery - your data lives only on this device. Keep regular backups.</p></div></div>',
+    '<p class="small" style="text-align:center;margin-top:14px">One password for login, backup and cloud sync. There is no password recovery, so write it down somewhere safe.</p></div></div>',
   acts: {
     eye: el => { const i = $('#sp'); i.type = i.type === 'password' ? 'text' : 'password'; },
     create: async () => {
       const n = $('#sn').value.trim(), id = $('#si').value.trim(), pw = $('#sp').value, e = $('#serr');
       if (!n || !id) return e.textContent = 'Name and email/username are required';
-      if (pw.length < 6) return e.textContent = 'Password must be at least 6 characters';
+      if (pw.length < 8) return e.textContent = 'Password must be at least 8 characters';
       if (pw !== $('#sp2').value) return e.textContent = 'Passwords do not match';
-      await withBusy('Creating account...', async () => { await Auth.create(n, id, pw); await metaSet('lockOn', true); });
-      SESSION.unlocked = true; setTab('home');
+      await withBusy('Creating account...', async () => { await Auth.create(n, id, pw); await metaSet('lockOn', true); await Auth.ensureRc(); });
+      SESSION.unlocked = true; STACK = [{ view: 'recovery', params: { first: true } }]; render();
     }
   }
 });
@@ -55,12 +55,42 @@ Views.login = async () => {
         if (!ok) { $('#lerr').textContent = 'Incorrect email/username or password'; return; }
         SESSION.unlocked = true; setTab(CUR_TAB === 'login' ? 'home' : (CUR_TAB || 'home'));
       },
-      forgot: async () => {
-        if (!await confirmDlg('Reset UroVault?', 'There is no way to recover a forgotten password. You can erase everything on this device and start fresh, then restore from a backup file.', 'Erase everything', true)) return;
-        await Repo.eraseAll(); toast('All data erased'); STACK = [{ view: 'onboarding' }]; render();
-      }
+      forgot: () => sheet('<h3>Reset password</h3><div class="small" style="margin-bottom:8px">Enter the recovery code you saved. Your data stays as it is. Old encrypted backups will still need the old password.</div><label class="lbl">Recovery code</label><input class="inp" id="rc1" autocapitalize="characters" autocorrect="off" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX"><label class="lbl">New password</label><input class="inp" id="rc2" type="password" autocomplete="new-password" placeholder="At least 8 characters"><div class="ferr" id="rce"></div><div style="height:12px"></div><button class="btn" id="rcok">Reset password</button><button class="linkbtn" style="display:block;margin:14px auto 0;color:var(--redd)" id="rcer">I do not have the code - erase everything</button>', (sh, close) => {
+        $('#rcok', sh).onclick = async () => {
+          const r = await Auth.rc(), e = $('#rce', sh);
+          if (!r || !r.ack) return e.textContent = 'No saved recovery code exists on this device';
+          if (rcNorm($('#rc1', sh).value) !== rcNorm(r.code)) return e.textContent = 'That recovery code is not correct';
+          const np = $('#rc2', sh).value; if (np.length < 8) return e.textContent = 'Password must be at least 8 characters';
+          const a = await Auth.acct();
+          await withBusy('Resetting...', () => Auth.setPassword(np)); close();
+          if (SY.cfg && SY.cfg.on) { try { await withBusy('Updating cloud...', () => syRekey(a.id, null, np)); } catch (x) { await syDisconnect(); toast('Password reset. Cloud sync paused - turn it on again in Settings.'); return; } }
+          toast('Password reset. Log in with the new password.');
+        };
+        $('#rcer', sh).onclick = async () => {
+          close();
+          if (!await confirmDlg('Erase everything?', 'All data on this device will be deleted. You can restore from a backup file or from the cloud afterwards.', 'Erase everything', true)) return;
+          await Repo.eraseAll(); toast('All data erased'); STACK = [{ view: 'onboarding' }]; render();
+        };
+      })
     },
     bind: () => { $('#lp').addEventListener('keydown', e => { if (e.key === 'Enter') $('[data-act=unlock]').click(); }); }
+  };
+};
+
+Views.recovery = async ({ first }) => {
+  const r = await Auth.ensureRc(), a = await Auth.acct();
+  const txt = 'UroVault recovery code\r\n\r\n' + r.code + '\r\n\r\nLogin ID: ' + a.id + '\r\n\r\nUse this code only if you forget your UroVault password (login screen > Forgot password). Keep it private and safe.';
+  return {
+    html: hdr('Recovery code', { back: !first }) + wrapPage(
+      '<div class="card" style="background:var(--navy);color:#fff;border:0;text-align:center;padding:22px 14px"><div class="small" style="color:#9FB4C8">Your recovery code</div><div style="font-family:ui-monospace,Menlo,monospace;font-size:19px;font-weight:700;letter-spacing:.5px;margin-top:8px;overflow-wrap:anywhere" id="rcv">' + esc(r.code) + '</div></div>' +
+      '<div class="card" style="background:var(--ambert);border-color:#FCD34D"><b>Save this once, keep it safe</b><div class="small" style="color:var(--amberd);margin-top:4px;line-height:1.5">You never type it day to day. It is only for when you forget your password: Login screen &rarr; Forgot password. Without the password <b>and</b> this code, your data cannot be opened. If you lose your phone and forget the password, this code cannot help either, so keep the password safe too.</div></div>' +
+      '<button class="btn" data-act="rcCopy">Copy code</button><button class="btn o" style="margin-top:8px" data-act="rcSave">Save as file (Files / iCloud)</button>' +
+      (first || !r.ack ? '<div style="height:16px"></div><button class="btn" style="background:var(--navy)" data-act="rcDone">I have saved it - continue</button>' : '')),
+    acts: {
+      rcCopy: async () => { try { await navigator.clipboard.writeText(r.code); toast('Code copied. Paste it into Notes.'); } catch (e) { toast('Could not copy - press and hold the code'); } },
+      rcSave: async () => { const x = await shareOrSave(new Blob([txt], { type: 'text/plain' }), 'urovault-recovery-code.txt'); if (x !== 'cancelled') toast('Saved'); },
+      rcDone: async () => { if (!await confirmDlg('Saved somewhere safe?', 'Notes, a password manager or a printout. A screenshot only on this phone is not enough if the phone is lost.', 'Yes, saved')) return; await Auth.ackRc(); SESSION.unlocked = true; STACK = [{ view: 'home' }]; render(); }
+    }
   };
 };
 
@@ -68,7 +98,7 @@ function lockNow() { if (!SESSION.unlocked) return; SESSION.unlocked = false; ST
 
 /* ---------------- home ---------------- */
 Views.home = async () => {
-  const [a, c, pend, ps, lastBk] = await Promise.all([Auth.acct(), Repo.counts(), Repo.pending(), Repo.patients(), metaGet('lastBackup')]);
+  const [a, c, pend, ps, lastBk, rcs] = await Promise.all([Auth.acct(), Repo.counts(), Repo.pending(), Repo.patients(), metaGet('lastBackup'), Auth.rc()]);
   const t = iso(today());
   const due = pend.filter(f => f.date <= t).slice(0, 5);
   const recent = ps.slice().sort((x, y) => (y.updatedAt || '').localeCompare(x.updatedAt || '')).slice(0, 5);
@@ -83,6 +113,7 @@ Views.home = async () => {
       '<div class="greet">' + greeting() + ',<br>Dr. ' + esc(first) + '</div>' +
       '<div class="stats">' + stat('tab" data-v="patients', 'users', c.patients, 'Patients') + stat('tab" data-v="followups', 'bell', c.due, 'Follow-ups Due') + stat('allSurg', 'book', c.surgeries, 'Log Book') + '</div></div></div>' +
       wrapPage(
+        ((!rcs || !rcs.ack) ? '<div class="card tap" data-act="goRecovery" style="background:var(--ambert);border-color:#FCD34D;display:flex;gap:12px;align-items:center;margin-top:16px">' + ic('alert', 22) + '<div style="flex:1"><b>Save your recovery code</b><div class="small" style="color:var(--amberd)">Needed if you ever forget your password.</div></div>' + ic('chev', 18) + '</div>' : '') +
         (needBk ? '<div class="card tap" data-act="goBackup" style="background:var(--ambert);border-color:#FCD34D;display:flex;gap:12px;align-items:center;margin-top:16px">' + ic('alert', 22) + '<div style="flex:1"><b>Back up your data</b><div class="small" style="color:var(--amberd)">' + (bkDays === null ? 'No backup yet. Safari can clear website data.' : 'Last backup ' + bkDays + ' days ago.') + '</div></div>' + ic('chev', 18) + '</div>' : '') +
         '<div class="sec" style="margin-top:20px"><h2>Quick Actions</h2></div><div class="qa q4">' +
         '<button data-act="newPatient"><div class="iconbox">' + ic('plus', 22) + '</div>New Patient</button>' +
@@ -96,7 +127,8 @@ Views.home = async () => {
     acts: {
       searchP: () => { PSTATE.focus = true; setTab('patients'); },
       allSurg: () => go('allSurgeries'),
-      goBackup: () => go('backup')
+      goBackup: () => go('backup'),
+      goRecovery: () => go('recovery')
     }
   };
 };

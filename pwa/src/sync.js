@@ -138,11 +138,11 @@ async function syConnect(f) {
   let r = await syRaw(url + '/auth/v1/token?grant_type=password', { method: 'POST', headers: H, body }), j = await r.json();
   if (!r.ok) {
     const r2 = await syRaw(url + '/auth/v1/signup', { method: 'POST', headers: H, body }), j2 = await r2.json();
-    if (!r2.ok) throw new Error(/already/i.test(JSON.stringify(j2)) ? 'Wrong password for this email' : (j2.msg || j2.message || j2.error_description || 'Login failed'));
+    if (!r2.ok) throw new Error(/already/i.test(JSON.stringify(j2)) ? 'A cloud account for this login ID already exists with a different password. Use the same login ID and password as on your old phone.' : (j2.msg || j2.message || j2.error_description || 'Login failed'));
     if (!j2.access_token) throw new Error('Account created, but email confirmation is ON. In Supabase go to Authentication > Providers > Email, turn off "Confirm email", then connect again.');
     j = j2;
   }
-  syTokens(j); cfg.uid = j.user.id;
+  syTokens(j); cfg.uid = j.user.id; cfg.cpw = f.pw;
   const rs = await (await syReq('/rest/v1/records?select=d&k=eq.meta:salt')).json();
   let salt;
   if (Array.isArray(rs) && rs.length) salt = b64d(rs[0].d);
@@ -176,4 +176,20 @@ async function syDerive(id, pw) {
   const bits = async lbl => new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: new TextEncoder().encode('urovault-' + lbl + '-v1:' + id), iterations: 150000, hash: 'SHA-256' }, km, 256));
   const clean = id.trim().toLowerCase().replace(/\s+/g, '.');
   return { email: clean.includes('@') ? clean : clean + '@urovault.app', cloudPw: b64e(await bits('cloud')), pass: b64e(await bits('enc')) };
+}
+
+/* Re-key cloud data to a new password. oldCpw = cloud password derived from the old password (stored on this device). */
+async function syRekey(id, oldPw, newPw) {
+  const d = await syDerive(id, newPw);
+  const cur = oldPw ? (await syDerive(id, oldPw)).cloudPw : SY.cfg.cpw;
+  if (!cur) throw new Error('Cloud login info missing');
+  const r = await syReq('/auth/v1/user', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ password: d.cloudPw, current_password: cur }) });
+  if (!r.ok) throw new Error(await syErr(r));
+  SY.cfg.cpw = d.cloudPw; await syCfgSave();
+  const rs = await (await syReq('/rest/v1/records?select=d&k=eq.meta:salt')).json();
+  SY.key = await uvbKey(d.pass, b64d(rs[0].d)); await metaSet('syncKey', SY.key);
+  const w = await syReq('/rest/v1/records?on_conflict=user_id,k', { method: 'POST', headers: { 'content-type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify([{ k: 'meta:check', d: b64e(await syEnc(new TextEncoder().encode('ok'))), mt: Date.now(), del: false, dev: SY.cfg.dev }]) });
+  if (!w.ok) throw new Error(await syErr(w));
+  await syQueueAll(); SY.busy = false; await syncNow(false);
+  if (SY.err) throw new Error(SY.err);
 }

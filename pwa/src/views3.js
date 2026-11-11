@@ -10,9 +10,9 @@ Views.more = async () => {
       '<div class="card phead" data-act="doctor" style="cursor:pointer"><div class="avatar lg">' + esc(initials(a.name.replace(/^dr\.?\s*/i, ''))) + '</div><div style="flex:1;min-width:0"><div class="t-name" style="font-size:17px">' + esc(a.name) + '</div><div class="t-sub">' + esc(a.id) + '</div></div>' + ic('chev', 18) + '</div>' +
       '<div style="height:6px"></div>' +
       mrow('logbook', 'book', 'Log Book', 'All surgeries, duration, assistants') + mrow('caseSeries', 'file', 'Case Series (Excel)', 'Export cases for presentations') + mrow('stats', 'bars', 'Statistics', 'Practice overview') + mrow('reports', 'download', 'Reports &amp; Export', 'CSV files, printable lists') +
-      mrow('backup', 'shield', 'Backup &amp; Restore', 'Keep your data safe') + mrow('settings', 'sliders', 'Settings', 'Lock, sample data, storage') +
+      mrow('backup', 'shield', 'Backup &amp; Restore', 'Keep your data safe') + mrow('settings', 'sliders', 'Settings', 'Account, password, cloud sync, AI, updates') +
       mrow('privacy', 'lock', 'Privacy &amp; Security', 'How your data is handled') + mrow('help', 'help', 'Help &amp; About', 'Version ' + APP_VERSION) + mrow('upd', 'refresh', UPDATE_AVAILABLE ? 'Update available' : 'Check for updates', UPDATE_AVAILABLE ? 'Tap to install the new version' : 'You are on v' + APP_VERSION) +
-      '<div style="height:8px"></div><button class="btn o" data-act="lock">' + ic('lock', 18) + ' Lock now</button>' + copyFoot(), true) + navbar('more'),
+      '<div style="height:8px"></div><button class="btn o" data-act="lock">' + ic('lock', 18) + ' Log out</button>' + copyFoot(), true) + navbar('more'),
     acts: {
       doctor: () => go('doctor'), caseSeries: () => go('caseSeries'), logbook: () => go('allSurgeries'), stats: () => go('stats'), reports: () => go('reports'), backup: () => go('backup'),
       settings: () => go('settings'), privacy: () => go('privacy'), help: () => go('help'), lock: () => lockNow(), upd: async () => { if (UPDATE_AVAILABLE || await checkUpdate(true)) { if (await confirmDlg('Install update?', 'The app will reload. Your data stays safe.', 'Update')) applyUpdate(); } }
@@ -78,18 +78,17 @@ Views.printList = async () => {
 /* ---- backup / restore ---- */
 let _bk = null; // prepared backup {blob,name}
 
-function askPass(title, confirm, allowPlain) {
+function askPw(title, msg, verify) {
   return new Promise(res => {
-    sheet('<h3>' + title + '</h3><div class="small" style="margin-bottom:8px">' + (confirm ? 'This passphrase encrypts the backup file. <b>If you forget it, the backup cannot be opened by anyone, including me.</b> Write it down somewhere safe.' : 'Enter the passphrase used when this backup was created.') + '</div><label class="lbl">Passphrase</label><input class="inp" type="password" id="pp1" autocomplete="off">' + (confirm ? '<label class="lbl">Confirm passphrase</label><input class="inp" type="password" id="pp2" autocomplete="off">' : '') + '<div class="ferr" id="ppe"></div><div style="height:12px"></div><button class="btn" id="ppok">Continue</button>' + (allowPlain ? '<button class="btn o" style="margin-top:8px" id="ppno">Save without encryption</button>' : '') + '<button class="linkbtn" style="display:block;margin:12px auto 0" id="ppx">Cancel</button>', (s, close) => {
+    sheet('<h3>' + title + '</h3><div class="small" style="margin-bottom:8px">' + msg + '</div><label class="lbl">UroVault password</label><input class="inp" id="pw1" type="password" autocomplete="off"><div class="ferr" id="pwe"></div><div style="height:12px"></div><button class="btn" id="pwok">Continue</button><button class="linkbtn" style="display:block;margin:12px auto 0" id="pwx">Cancel</button>', (s, close) => {
       let done = false; const mo = new MutationObserver(() => { if (!document.body.contains(s)) fin(null); }); const fin = v => { if (done) return; done = true; mo.disconnect(); close(); res(v); };
       mo.observe(document.body, { childList: true });
-      $('#ppx', s).onclick = () => fin(null);
-      if (allowPlain) $('#ppno', s).onclick = () => fin('');
-      $('#ppok', s).onclick = () => {
-        const a = $('#pp1', s).value, e = $('#ppe', s);
-        if (a.length < 8) return e.textContent = 'Use at least 8 characters';
-        if (confirm && a !== $('#pp2', s).value) return e.textContent = 'Passphrases do not match';
-        fin(a);
+      $('#pwx', s).onclick = () => fin(null);
+      $('#pwok', s).onclick = async () => {
+        const v = $('#pw1', s).value, e = $('#pwe', s);
+        if (!v) return e.textContent = 'Enter your password';
+        if (verify) { const a = await Auth.acct(); if (!await Auth.verify(a.id, v)) return e.textContent = 'Incorrect password'; if (v.length < 8) return e.textContent = 'Password must be 8+ characters to encrypt data. Change it in Settings > Change password first.'; }
+        fin(v);
       };
     });
   });
@@ -105,13 +104,13 @@ Views.backup = async () => {
       '<div class="sec"><h2>Restore</h2></div><div class="small" style="margin-bottom:8px">Restoring replaces everything currently on this device.</div><button class="btn o" data-act="restore">' + ic('upload', 18) + ' Choose backup file</button>'),
     acts: {
       prep: async () => {
-        const pass = await askPass('Protect this backup', true, true);
+        const pass = await askPw('Encrypt backup', 'The backup file is encrypted with your UroVault password. Use the same password to restore it.', true);
         if (pass === null) return;
         const b = busy('Preparing backup...');
         try {
           let blob = await Repo.buildBackup((k, n) => b.set('Packing images ' + k + ' / ' + n));
-          if (pass) { b.set('Encrypting...'); blob = await encryptBlob(blob, pass); }
-          _bk = { blob, name: 'urovault-backup-' + iso(today()) + (pass ? '.uvb' : '.json') };
+          b.set('Encrypting...'); blob = await encryptBlob(blob, pass);
+          _bk = { blob, name: 'urovault-backup-' + iso(today()) + '.uvb' };
         } catch (e) { b.done(); return alertDlg('Backup failed', e.message); }
         b.done();
         $('#bkbox').innerHTML = '<div class="card tap" style="display:flex;gap:10px;align-items:center;background:var(--greent);border-color:#6EE7B7">' + ic('check', 22) + '<div><b>Backup ready</b><div class="small">' + (_bk.blob.size / 1048576).toFixed(1) + ' MB</div></div></div><button class="btn" data-act="saveBk">' + ic('share', 20) + ' Save / Share backup</button>';
@@ -124,7 +123,7 @@ Views.backup = async () => {
       restore: async () => {
         const fs = await pickFiles({ accept: '' }); if (!fs.length) return;
         const enc = await isEncryptedBackup(fs[0]); let src = fs[0];
-        if (enc) { const pw = await askPass('Backup passphrase', false, false); if (pw === null) return; const bz = busy('Decrypting...'); try { src = await decryptBlob(fs[0], pw); } catch (e) { bz.done(); return alertDlg('Cannot open backup', e.message); } bz.done(); }
+        if (enc) { const pw = await askPw('Backup password', 'Enter the UroVault password that was set when this backup was made.', false); if (pw === null) return; const bz = busy('Decrypting...'); try { src = await decryptBlob(fs[0], pw); } catch (e) { bz.done(); return alertDlg('Cannot open backup', e.message); } bz.done(); }
         if (!await confirmDlg('Replace all data?', 'Everything on this device will be replaced with the backup (' + fs[0].name + ').', 'Restore', true)) return;
         const b = busy('Restoring...');
         try { await Repo.restoreBackup(await src.text()); b.done(); toast('Restore complete'); setTab('home'); }
@@ -136,6 +135,18 @@ Views.backup = async () => {
 
 /* ---- settings ---- */
 ACT.copySql = async () => { try { await navigator.clipboard.writeText(SY_SQL); toast('SQL copied'); } catch (e) { alertDlg('Copy failed', 'Long-press the text below and copy it manually.'); } };
+async function syGo(pw) {
+  const a = await Auth.acct(), f = { url: SY_URL, anon: SY_KEY, signup: true };
+  let st;
+  try { const d = await withBusy('Preparing...', () => syDerive(a.id, pw)); f.email = d.email; f.pw = d.cloudPw; f.pass = d.pass; st = await withBusy('Connecting...', () => syConnect(f)); }
+  catch (x) { SY.cfg = null; SY.key = null; return alertDlg('Cloud sync failed', x.message || 'Failed'); }
+  let mode = 'push';
+  if (st.hasRemote && st.hasLocal) { if (!await confirmDlg('Cloud already has data', 'This device also has data. Use the cloud copy and REPLACE what is on this phone? (Take a backup first if unsure.)', 'Use cloud data', true)) { SY.cfg = null; SY.key = null; return; } mode = 'pull'; }
+  else if (st.hasRemote) mode = 'pull';
+  await withBusy(mode === 'pull' ? 'Downloading from cloud...' : 'Uploading to cloud...', () => syEnable(mode));
+  toast('Cloud sync is on'); refresh();
+}
+
 function syCard() {
   const c = SY.cfg;
   if (c && c.on) {
@@ -146,14 +157,16 @@ function syCard() {
 }
 
 Views.settings = async () => {
-  const [lockOn, demo, est, persisted, aiKey, aiModel, aiProv0] = await Promise.all([metaGet('lockOn'), Repo.hasDemo(), (navigator.storage && navigator.storage.estimate ? navigator.storage.estimate() : Promise.resolve(null)), (navigator.storage && navigator.storage.persisted ? navigator.storage.persisted() : Promise.resolve(false)), metaGet('aiKey'), metaGet('aiModel'), metaGet('aiProv')]);
+  const [lockOn, demo, est, persisted, aiKey, aiModel, aiProv0, acc, rcs] = await Promise.all([metaGet('lockOn'), Repo.hasDemo(), (navigator.storage && navigator.storage.estimate ? navigator.storage.estimate() : Promise.resolve(null)), (navigator.storage && navigator.storage.persisted ? navigator.storage.persisted() : Promise.resolve(false)), metaGet('aiKey'), metaGet('aiModel'), metaGet('aiProv'), Auth.acct(), Auth.rc()]);
   const aiProv = aiProv0 || 'gemini';
   const on = lockOn !== false;
   return {
     html: hdr('Settings') + wrapPage(
-      '<div class="card mrow"><div class="iconbox">' + ic('lock', 20) + '</div><div class="grow"><div class="t">Require password</div><div class="s">Asked on open and after 2 min away</div></div><button class="sw ' + (on ? 'on' : '') + '" data-act="lockTog" aria-label="Toggle"></button></div>' +
-      mrow('chpw', 'edit', 'Change password') +
-      '<div class="sec"><h2>Cloud sync</h2></div>' + syCard() +
+      '<div class="sec" style="margin-top:4px"><h2>Account</h2></div><div class="card phead"><div class="avatar lg">' + esc(initials(acc.name.replace(/^dr\.?\s*/i, ''))) + '</div><div style="flex:1;min-width:0"><div class="t-name" style="font-size:17px">' + esc(acc.name) + '</div><div class="t-sub">' + esc(acc.id) + '</div></div></div>' +
+      mrow('chName', 'edit', 'Edit name') + mrow('chpw', 'lock', 'Change password', 'One password for login, backup and cloud sync') + mrow('viewRc', 'shield', 'Recovery code', 'For a forgotten password' + ((rcs && rcs.ack) ? '' : ' - not saved yet')) +
+      '<button class="btn o" style="margin-top:8px" data-act="logout">' + ic('lock', 18) + ' Log out</button>' +
+      '<div class="sec"><h2>Security</h2></div><div class="card mrow"><div class="iconbox">' + ic('lock', 20) + '</div><div class="grow"><div class="t">Ask for password on open</div><div class="s">Also after 2 min away from the app</div></div><button class="sw ' + (on ? 'on' : '') + '" data-act="lockTog" aria-label="Toggle"></button></div>' +
+      '<div class="sec"><h2>Cloud sync</h2></div>' + syCard() + mrow('backup', 'shield', 'Backup & Restore', 'Encrypted file with your password') +
       '<div class="sec"><h2>App update</h2></div><div class="card"><div class="kv"><span>Installed version</span><span>v' + APP_VERSION + '</span></div><div class="kv"><span>Status</span><span>' + (UPDATE_AVAILABLE ? 'Update available' : 'Not checked / up to date') + '</span></div></div><div style="height:10px"></div><button class="btn" data-act="updCheck">' + ic('refresh', 18) + ' Check &amp; update to latest</button><div class="small" style="margin-top:8px">Always loads the newest version, even if the update banner did not appear. Your patient data stays safe.</div>' +
       '<div class="sec"><h2>AI assistant (optional)</h2></div><div class="card"><div class="small" style="margin-bottom:8px">Used only for "Review with AI" in EAU Guidance. Your key is stored on this device only. Patient identity is never sent.</div><label class="lbl">Provider</label><div class="chips wrapchips" id="aip"><button type="button" class="chip sm ' + (aiProv === 'gemini' ? 'on' : '') + '" data-act="aiProv" data-p="gemini">Google Gemini (free tier)</button><button type="button" class="chip sm ' + (aiProv === 'anthropic' ? 'on' : '') + '" data-act="aiProv" data-p="anthropic">Anthropic</button></div><label class="lbl">API key</label><input class="inp" type="password" id="aik" placeholder="Paste API key" value="' + esc(aiKey || '') + '" autocomplete="off"><label class="lbl">Model</label><input class="inp" id="aim" value="' + esc((aiModel && aiModel !== 'gemini-2.5-flash' ? aiModel : '') || (aiProv === 'gemini' ? 'gemini-3.8-flash' : 'claude-sonnet-5-5')) + '"><div style="height:10px"></div><button class="btn sm" data-act="aiSave">Save</button><button class="btn o sm" style="margin-top:8px" data-act="aiTest">Test key &amp; list models</button><div id="aiTr" class="small" style="margin-top:8px"></div></div>' +
       '<div class="sec"><h2>Sample data</h2></div>' + (demo ? mrow('clearDemo', 'trash', 'Remove sample patients', 'Deletes the 4 demo records') : mrow('loadDemo', 'plusc', 'Load sample patients', 'Four fictional patients to explore the app')) +
@@ -163,22 +176,10 @@ Views.settings = async () => {
       aiProv: async el => { await metaSet('aiProv', el.dataset.p); await metaSet('aiModel', ''); refresh(); },
       syNow: async () => { await syncNow(true); refresh(); },
       syOff: async () => { if (!await confirmDlg('Disconnect cloud sync?', 'Data already in the cloud stays there. This device stops syncing.', 'Disconnect', true)) return; await syDisconnect(); refresh(); },
-      syOn: () => sheet('<h3>Cloud sync</h3><div class="small" style="margin-bottom:6px">Uses your UroVault login. Just enter your password once.</div><label class="lbl">Your UroVault password</label><input class="inp" id="sy4" type="password" autocomplete="off"><div class="small" style="margin-top:6px">On a new phone, create the UroVault account with the <b>same login ID and password</b>, then turn on cloud sync. <b>If you forget this password, the cloud copy cannot be opened.</b></div><div class="ferr" id="sye"></div><div style="height:12px"></div><button class="btn" id="syg">Turn on cloud sync</button>', (s, close) => {
-        $('#syg', s).onclick = async () => {
-          const f = { url: SY_URL, anon: SY_KEY }, pw = $('#sy4', s).value, e = $('#sye', s);
-          const a = await Auth.acct();
-          if (!await Auth.verify(a.id, pw)) return e.textContent = 'UroVault password is incorrect';
-          if (pw.length < 8) return e.textContent = 'Use a UroVault password of 8+ characters for encryption (Settings > Change password), then try again';
-          let st;
-          try { const d = await withBusy('Preparing...', () => syDerive(a.id, pw)); f.email = d.email; f.pw = d.cloudPw; f.pass = d.pass; st = await withBusy('Connecting...', () => syConnect(f)); } catch (x) { SY.cfg = null; SY.key = null; return e.textContent = x.message || 'Failed'; }
-          close();
-          let mode = 'push';
-          if (st.hasRemote && st.hasLocal) { if (!await confirmDlg('Cloud already has data', 'This device also has data. Use the cloud copy and REPLACE what is on this phone? (Take a backup first if unsure.)', 'Use cloud data', true)) { SY.cfg = null; SY.key = null; return; } mode = 'pull'; }
-          else if (st.hasRemote) mode = 'pull';
-          await withBusy(mode === 'pull' ? 'Downloading from cloud...' : 'Uploading to cloud...', () => syEnable(mode));
-          toast('Cloud sync is on'); refresh();
-        };
-      }),
+      syOn: async () => {
+        const pw = await askPw('Turn on cloud sync', 'Your data is encrypted on this phone with your UroVault password, then synced automatically. On a new phone, make the account with the same login ID and password and turn sync on here to bring everything back.', true);
+        if (pw === null) return; await syGo(pw);
+      },
       aiTest: async () => {
         const key = $('#aik').value.trim(); if (!key) return toast('Paste the key first');
         const el = $('#aiTr'); el.textContent = 'Testing...';
@@ -190,14 +191,20 @@ Views.settings = async () => {
       aiPick: async el => { $('#aim').value = el.dataset.m; await metaSet('aiKey', $('#aik').value.trim()); await metaSet('aiModel', el.dataset.m); toast('Model set: ' + el.dataset.m); },
       aiSave: async () => { await metaSet('aiKey', $('#aik').value.trim()); await metaSet('aiModel', $('#aim').value.trim()); toast('Saved'); },
       updCheck: async () => { await checkUpdate(false); applyUpdate(); },
+      chName: () => sheet('<h3>Edit name</h3><label class="lbl">Full name</label><input class="inp" id="en1" value="' + esc(acc.name) + '"><div style="height:12px"></div><button class="btn" id="en2">Save</button>', (s, close) => { $('#en2', s).onclick = async () => { const v = $('#en1', s).value.trim(); if (!v) return; await Auth.setName(v); close(); toast('Name updated'); refresh(); }; }),
+      viewRc: async () => { const pw = await askPw('Show recovery code', 'Enter your password to view it.', false); if (pw === null) return; if (!await Auth.verify(acc.id, pw)) return alertDlg('Incorrect password', 'Try again.'); go('recovery'); },
+      logout: async () => { if (!await confirmDlg('Log out?', 'You will need your password to open UroVault again. Your data and cloud sync stay as they are.', 'Log out')) return; lockNow(); },
       lockTog: async () => { await metaSet('lockOn', !on); refresh(); },
-      chpw: () => sheet('<h3>Change password</h3><label class="lbl">Current password</label><input class="inp" type="password" id="cp0"><label class="lbl">New password</label><input class="inp" type="password" id="cp1" placeholder="At least 6 characters"><label class="lbl">Confirm new password</label><input class="inp" type="password" id="cp2"><div class="ferr" id="cpe"></div><div style="height:14px"></div><button class="btn" id="cps">Update</button>', (s, close) => {
+      chpw: () => sheet('<h3>Change password</h3><label class="lbl">Current password</label><input class="inp" type="password" id="cp0"><label class="lbl">New password</label><input class="inp" type="password" id="cp1" placeholder="At least 8 characters"><label class="lbl">Confirm new password</label><input class="inp" type="password" id="cp2"><div class="ferr" id="cpe"></div><div style="height:14px"></div><button class="btn" id="cps">Update</button>', (s, close) => {
         $('#cps', s).onclick = async () => {
           const a = await Auth.acct(); const e = $('#cpe', s);
           if (!await Auth.verify(a.id, $('#cp0', s).value)) return e.textContent = 'Current password is incorrect';
-          if ($('#cp1', s).value.length < 6) return e.textContent = 'New password must be at least 6 characters';
+          if ($('#cp1', s).value.length < 8) return e.textContent = 'New password must be at least 8 characters';
           if ($('#cp1', s).value !== $('#cp2', s).value) return e.textContent = 'Passwords do not match';
-          await withBusy('Updating...', () => Auth.setPassword($('#cp1', s).value)); close(); toast('Password changed'); if (SY.cfg && SY.cfg.on) alertDlg('Cloud sync note', 'Cloud sync was set up with your OLD password and keeps working on this phone. On a new phone, create the account with the OLD password, or Disconnect and set up sync again here with the new one.');
+          const oldPw = $('#cp0', s).value, newPw = $('#cp1', s).value;
+          await withBusy('Updating...', () => Auth.setPassword(newPw)); close();
+          if (SY.cfg && SY.cfg.on) { try { await withBusy('Re-encrypting cloud data...', () => syRekey(a.id, oldPw, newPw)); toast('Password changed. Cloud updated.'); } catch (x) { await syDisconnect(); alertDlg('Cloud sync paused', 'Password changed, but the cloud could not be updated (' + (x.message || 'error') + '). Turn cloud sync on again in Settings.'); } }
+          else toast('Password changed'); if (SY.cfg && SY.cfg.on) alertDlg('Cloud sync note', 'Cloud sync was set up with your OLD password and keeps working on this phone. On a new phone, create the account with the OLD password, or Disconnect and set up sync again here with the new one.');
         };
       }),
       loadDemo: async () => { await withBusy('Loading...', () => Repo.loadDemo()); toast('Sample patients added'); refresh(); },

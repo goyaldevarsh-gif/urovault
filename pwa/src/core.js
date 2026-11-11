@@ -1,6 +1,6 @@
 'use strict';
 /* ===================== UroVault PWA - core: utils, icons, db, repo ===================== */
-const APP_VERSION = '1.5.5';
+const APP_VERSION = '1.7.0';
 const BUILD_ID = '__BUILD__';
 const COPYRIGHT = '&copy; 2026 Dr. Devarsh Goyal. All rights reserved.';
 const copyFoot = () => '<div class="small" style="text-align:center;margin:22px 0 4px;opacity:.85">' + COPYRIGHT + '<br>UroVault v' + APP_VERSION + '</div>';
@@ -453,7 +453,14 @@ async function pbk(pw, salt) {
   const key = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveBits']);
   return new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 150000, hash: 'SHA-256' }, key, 256));
 }
+const RC_ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const rcNorm = s => (s || '').toUpperCase().replace(/[^A-Z2-9]/g, '').replace(/[OIL]/g, '');
+const rcFmt = s => (s.match(/.{1,4}/g) || []).join('-');
+function rcGen() { const u = crypto.getRandomValues(new Uint8Array(20)); let o = ''; for (const b of u) o += RC_ALPHA[b % RC_ALPHA.length]; return rcFmt(o); }
 const Auth = {
+  rc: () => metaGet('rc'),
+  async ensureRc() { let r = await metaGet('rc'); if (!r) { r = { code: rcGen(), ack: false }; await metaSet('rc', r); } return r; },
+  async ackRc() { const r = await metaGet('rc'); if (r) { r.ack = true; await metaSet('rc', r); } },
   has: async () => !!(await metaGet('acct')),
   async create(name, id, pw) {
     const salt = crypto.getRandomValues(new Uint8Array(16));
