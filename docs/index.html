@@ -231,8 +231,8 @@ input[type=date].inp{min-height:50px;display:block;text-align:left;-webkit-min-l
 <script>
 'use strict';
 /* ===================== UroVault PWA - core: utils, icons, db, repo ===================== */
-const APP_VERSION = '1.7.2';
-const BUILD_ID = '20261111084925';
+const APP_VERSION = '1.8.0';
+const BUILD_ID = '20261111091248';
 const COPYRIGHT = '&copy; 2026 Dr. Devarsh Goyal. All rights reserved.';
 const copyFoot = () => '<div class="small" style="text-align:center;margin:22px 0 4px;opacity:.85">' + COPYRIGHT + '<br>UroVault v' + APP_VERSION + '</div>';
 
@@ -251,7 +251,19 @@ const LATERALITY = ['Right', 'Left', 'Bilateral'];
 const INV_OPTIONS = ['RFT', 'CBC', 'Urine Analysis', 'Urine Culture', 'PSA', 'CT', 'MRI', 'DTPA', 'PET CT', 'Other'];
 const INV_ICON = { 'RFT': 'flask', 'CBC': 'drop', 'Urine Analysis': 'drop', 'Urine Culture': 'flask', 'PSA': 'drop', 'CT': 'scan', 'MRI': 'scan', 'DTPA': 'activity', 'PET CT': 'scan', 'Other': 'file' };
 const MEDIA_CATS = ['Clinical', 'Pre-op', 'Post-op', 'Follow-up', 'CT', 'MRI', 'Other'];
-const PROCEDURES = ['TURBT', 'TURP', 'PCNL', 'URS + DJ stenting', 'RIRS', 'Radical nephrectomy', 'Pyeloplasty', 'Radical prostatectomy', 'Cystoscopy'];
+const PROCEDURES = ['TURBT', 'TURP', 'PCNL', 'URS + DJ stenting', 'DJ stenting', 'DJ stent removal', 'RIRS', 'Radical nephrectomy', 'Pyeloplasty', 'Radical prostatectomy', 'Cystoscopy'];
+const SIDES = ['Right', 'Left', 'Bilateral', 'NA'];
+/* Procedure presets: only fill EMPTY fields; "__" marks blanks to complete. Edit freely. */
+const SURG_PRESETS = {
+  'TURP': { indication: 'BPH with LUTS / retention, not responding to medical therapy', findings: 'Prostate __ g, __ lobes. Urethra __. Bladder __.', notes: 'Anaesthesia: __. Lithotomy. Cystourethroscopy, then resection (monopolar/bipolar) of prostate, haemostasis secured, chips evacuated. __ Fr 3-way catheter placed with irrigation.', postop: 'Continuous bladder irrigation until clear. Catheter removal on POD __, then trial without catheter. Chips sent for HPE.' },
+  'URS + DJ stenting': { indication: 'Ureteric calculus __ mm, __ ureter (__ side)', findings: 'Stone at __. Ureter __. Mucosa __.', notes: 'Anaesthesia: __. Lithotomy. Semirigid/flexible URS, stone fragmented with __ (holmium/pneumatic), fragments retrieved. DJ stent __ Fr x __ cm placed. Guidewire __.', postop: 'DJ stent removal planned at __ weeks. Fluids, analgesics, alpha-blocker. Stone analysis if retrieved.' },
+  'PCNL': { indication: 'Renal calculus __ mm, __ side, __', findings: 'Stone burden __. Access via __ calyx. Collecting system __.', notes: 'GA. Ureteric catheter placed, then prone. Access via __ calyx under fluoroscopy, tract dilated to __ Fr, stone fragmented and cleared with __. Nephrostomy/tubeless, DJ stent __.', postop: 'Check Hb. Nephrostomy removal POD __. X-ray KUB for residual fragments.' },
+  'DJ stenting': { indication: '__ (e.g. obstructing calculus / pre-op decompression / post-URS)', findings: 'Under vision: __', notes: 'Cystoscopy, guidewire passed to __ pelvis, DJ stent __ Fr x __ cm placed, position confirmed.', postop: 'Stent to be removed/replaced on __.' },
+  'DJ stent removal': { indication: 'Stent in situ since __; stone/procedure completed', findings: 'Stent __ (encrusted? Y/N)', notes: 'Cystoscopy, stent grasped and removed intact.', postop: 'Review if fever, haematuria or flank pain.' },
+  'RIRS': { indication: 'Renal calculus __ mm, __ side', findings: 'Stone at __. Access sheath __.', notes: 'GA. Flexible URS with access sheath, stone fragmented with holmium laser, basketed. DJ stent __.', postop: 'Stent removal planned at __ weeks.' },
+  'TURBT': { indication: 'Bladder tumour on imaging/cystoscopy', findings: 'Tumour(s): number __, size __ cm, site __, appearance __.', notes: 'Anaesthesia: __. Resection of tumour with base biopsy/muscle sampling __. Haemostasis secured. Catheter __ Fr.', postop: 'Catheter removal POD __. HPE to guide further treatment (single dose intravesical chemo: __).' },
+  'Cystoscopy': { indication: '__', findings: 'Urethra __. Prostate __. Bladder __. Ureteric orifices __.', notes: 'Diagnostic cystoscopy with __ scope under __ anaesthesia.', postop: '' }
+};
 const INTERVALS = ['1 week', '2 weeks', '1 month', '3 months', '6 months', '1 year'];
 const STATUSES = ['Improving', 'Stable', 'Worsening'];
 const FILTERS = ['All', 'Renal', 'Bladder', 'Prostate', 'Other'];
@@ -523,7 +535,7 @@ const Repo = {
   },
   async saveSurgery(s) {
     const rec = Object.assign({}, s);
-    ['indication', 'notes', 'findings', 'hpe', 'postop', 'assist1', 'assist2', 'assist3'].forEach(k => { rec[k] = nn(rec[k]); });
+    ['indication', 'notes', 'findings', 'hpe', 'postop', 'assist1', 'assist2', 'assist3', 'side'].forEach(k => { rec[k] = nn(rec[k]); });
     rec.duration = rec.duration ? Math.max(0, Math.round(Number(rec.duration))) || null : null;
     rec.procedure = rec.procedure.trim();
     if (!rec.id) { rec.createdAt = new Date().toISOString(); delete rec.id; }
@@ -1329,24 +1341,35 @@ Views.home = async () => {
 };
 
 /* ---------------- patients list ---------------- */
-const PSTATE = { q: '', f: 'All', focus: false };
+const PSTATE = { q: '', f: 'All', proc: '', yr: '', focus: false };
 Views.patients = async () => {
   const all = (await Repo.patients()).sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+  const sg = new Map(); (await Repo.allSurgeries()).forEach(x => { (sg.get(x.patientId) || sg.set(x.patientId, []).get(x.patientId)).push(x); });
+  const procs = [...new Set([].concat(...[...sg.values()]).map(x => x.procedure))].sort();
+  const yrs = [...new Set([].concat(...[...sg.values()]).map(x => String(x.date).slice(0, 4)))].sort().reverse();
   const list = () => {
     const q = PSTATE.q.trim().toLowerCase();
-    return all.filter(p => matchesGroup((p.dx || []).map(d => d.name), PSTATE.f) &&
-      (!q || [p.name, p.uhid, p.mobile, p.cc, p.addDx, ...(p.dx || []).map(d => d.name)].some(x => x && String(x).toLowerCase().includes(q))));
+    return all.filter(p => {
+      const ss = sg.get(p.id) || [];
+      if (!matchesGroup((p.dx || []).map(d => d.name), PSTATE.f)) return false;
+      if ((PSTATE.proc || PSTATE.yr) && !ss.some(x => (!PSTATE.proc || x.procedure === PSTATE.proc) && (!PSTATE.yr || String(x.date).slice(0, 4) === PSTATE.yr))) return false;
+      return !q || [p.name, p.uhid, p.mobile, p.cc, p.addDx, ...(p.dx || []).map(d => d.name), ...ss.map(x => x.procedure)].some(x => x && String(x).toLowerCase().includes(q));
+    });
   };
   const body = () => { const l = list(); return l.length ? l.map(ptile).join('') : (all.length ? emptyBox('search', 'No matches', 'Try a different search or filter.') : emptyBox('users', 'No patients yet', 'Tap + to register your first patient.')); };
+  const row = (id, lab, arr, cur) => arr.length ? '<div class="chips" id="' + id + '" style="max-width:640px;margin:0 auto"><span class="small" style="align-self:center;margin-right:2px">' + lab + '</span>' + ['Any'].concat(arr).map(x => '<button class="chip sm ' + ((cur || 'Any') === x ? 'on' : '') + '" data-v="' + esc(x) + '">' + esc(x) + '</button>').join('') + '</div>' : '';
+  const cnt = () => list().length + ' of ' + all.length + ' patients' + ((PSTATE.proc || PSTATE.yr) ? ' &middot; ' + esc([PSTATE.proc, PSTATE.yr].filter(Boolean).join(' ')) : '');
   return {
     html: hdr('Patients', { back: false }) +
-      '<div class="wrap"><div class="sticky-search"><div class="sch">' + ic('search', 20) + '<input class="inp" id="q" type="search" placeholder="Search name, UHID, diagnosis" value="' + esc(PSTATE.q) + '"></div></div></div>' +
+      '<div class="wrap"><div class="sticky-search"><div class="sch">' + ic('search', 20) + '<input class="inp" id="q" type="search" placeholder="Search name, UHID, diagnosis, procedure" value="' + esc(PSTATE.q) + '"></div></div></div>' +
       '<div class="chips" id="pf" style="max-width:640px;margin:0 auto">' + FILTERS.map(f => '<button class="chip ' + (PSTATE.f === f ? 'on' : '') + '" data-f="' + f + '">' + f + '</button>').join('') + '</div>' +
-      wrapPage('<div class="small" id="pcount" style="margin:2px 2px 8px">' + list().length + ' of ' + all.length + ' patients</div><div id="plist">' + body() + '</div>', true) + navbar('patients'),
+      row('pp', 'Procedure', procs, PSTATE.proc) + row('py', 'Year', yrs, PSTATE.yr) +
+      wrapPage('<div class="small" id="pcount" style="margin:2px 2px 8px">' + cnt() + '</div><div id="plist">' + body() + '</div>', true) + navbar('patients'),
     bind: root => {
-      const upd = () => { $('#plist').innerHTML = body(); $('#pcount').textContent = list().length + ' of ' + all.length + ' patients'; };
+      const upd = () => { $('#plist').innerHTML = body(); $('#pcount').innerHTML = cnt(); };
       $('#q').oninput = debounce(e => { PSTATE.q = e.target.value; upd(); }, 120);
       $('#pf').onclick = e => { const b = e.target.closest('[data-f]'); if (!b) return; PSTATE.f = b.dataset.f; $$('#pf .chip').forEach(x => x.classList.toggle('on', x === b)); upd(); };
+      [['pp', 'proc'], ['py', 'yr']].forEach(([id, k]) => { const el = $('#' + id); if (el) el.onclick = e => { const b = e.target.closest('[data-v]'); if (!b) return; PSTATE[k] = b.dataset.v === 'Any' ? '' : b.dataset.v; $$('#' + id + ' .chip').forEach(x => x.classList.toggle('on', x === b)); upd(); }; });
       if (PSTATE.focus) { PSTATE.focus = false; $('#q').focus(); }
     }
   };
@@ -1532,7 +1555,7 @@ Views.profile = async (params) => {
       const att = media.filter(m => m.refType === 'surgery' && m.refId === s.id);
       return '<div class="card tap" data-act="editSurg" data-id="' + s.id + '"><div style="display:flex;gap:10px;align-items:center"><div class="iconbox">' + ic('scalpel', 22) + '</div><div style="flex:1;min-width:0"><div class="t-name" style="white-space:normal">' + esc(s.procedure) + '</div><div class="t-sub">' + fmt(s.date) + '</div></div>' + ic('chev', 18) + '</div>' +
         (s.indication ? '<div class="small" style="margin-top:8px;color:var(--navy)">' + esc(s.indication) + '</div>' : '') +
-        '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' + (s.duration ? '<span class="pill grey">' + fmtDur(s.duration) + '</span>' : '') + (assistants(s).length ? '<span class="pill grey">Asst: ' + esc(assistants(s).join(', ')) + '</span>' : '') + (s.hpe ? '<span class="pill">HPE</span>' : '') + (s.postop ? '<span class="pill grey">Post-op notes</span>' : '') + (att.length ? '<span class="pill grey">' + att.length + ' attachment' + (att.length > 1 ? 's' : '') + '</span>' : '') + '</div></div>';
+        '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' + (s.side ? '<span class="pill">' + esc(s.side) + '</span>' : '') + (s.duration ? '<span class="pill grey">' + fmtDur(s.duration) + '</span>' : '') + (assistants(s).length ? '<span class="pill grey">Asst: ' + esc(assistants(s).join(', ')) + '</span>' : '') + (s.hpe ? '<span class="pill">HPE</span>' : '') + (s.postop ? '<span class="pill grey">Post-op notes</span>' : '') + (att.length ? '<span class="pill grey">' + att.length + ' attachment' + (att.length > 1 ? 's' : '') + '</span>' : '') + '</div></div>';
     }).join('') : emptyBox('scalpel', 'No surgeries recorded', 'Add the procedure, findings and histopathology.'));
   }
   async function fuTab() {
@@ -1673,13 +1696,14 @@ Views.surgeryForm = async ({ pid, id }) => {
   const pt = await Repo.patient(pid);
   const v = s || {};
   const media = s ? (await Repo.media(pid)).filter(m => m.refType === 'surgery' && m.refId === s.id) : [];
-  let cat = null;
+  let cat = null, side = v.side || null;
   const ta = (k, l, ph) => '<label class="lbl">' + l + '</label><textarea class="ta" id="' + k + '" style="min-height:84px" placeholder="' + ph + '">' + esc(v[k] || '') + '</textarea>';
   return {
     html: hdr(s ? 'Edit Surgery' : 'Add Surgery') + wrapPage(
       '<div class="card tile" style="margin:0 0 4px"><div class="avatar">' + esc(initials(pt.name)) + '</div><div class="grow"><div class="t-name">' + esc(pt.name) + '</div><div class="t-sub"><b>' + esc(pt.uhid) + '</b></div></div></div>' +
       '<label class="lbl" style="margin-top:4px">Procedure <i>*</i></label><div class="chips wrapchips" id="procs">' + PROCEDURES.map(x => '<button type="button" class="chip sm ' + (v.procedure === x ? 'on' : '') + '" data-p="' + esc(x) + '">' + esc(x) + '</button>').join('') + '</div>' +
       '<input class="inp" id="proc" style="margin-top:10px" placeholder="Procedure name (type or pick above)" value="' + esc(v.procedure || '') + '">' +
+      '<label class="lbl">Side</label><div class="chips wrapchips" id="sides">' + SIDES.map(x => '<button type="button" class="chip sm ' + (v.side === x ? 'on' : '') + '" data-sd="' + x + '">' + x + '</button>').join('') + '</div>' +
       '<label class="lbl">Date <i>*</i></label><input class="inp" type="date" id="sdate" value="' + (v.date || iso(today())) + '">' +
       '<label class="lbl">Duration of surgery (minutes)</label><input class="inp" id="duration" type="number" inputmode="numeric" min="0" max="1440" placeholder="e.g. 90" value="' + esc(v.duration || '') + '"><div class="small" id="durl" style="margin-top:5px">' + esc(fmtDur(v.duration)) + '</div>' +
       '<label class="lbl">Assistants</label>' + [1, 2, 3].map(n => '<input class="inp" id="assist' + n + '" style="margin-bottom:8px" placeholder="Assistant ' + n + '" value="' + esc(v['assist' + n] || '') + '">').join('') +
@@ -1696,7 +1720,7 @@ Views.surgeryForm = async ({ pid, id }) => {
         if (!date) return toast('Date is required');
         const st = Views._sst;
         await withBusy('Saving...', async () => {
-          const sid = await Repo.saveSurgery({ id: s ? s.id : undefined, createdAt: s ? s.createdAt : undefined, patientId: pid, procedure: proc, date, duration: $('#duration').value, assist1: $('#assist1').value, assist2: $('#assist2').value, assist3: $('#assist3').value, indication: $('#indication').value, findings: $('#findings').value, notes: $('#notes').value, hpe: $('#hpe').value, postop: $('#postop').value });
+          const sid = await Repo.saveSurgery({ id: s ? s.id : undefined, createdAt: s ? s.createdAt : undefined, patientId: pid, procedure: proc, side, date, duration: $('#duration').value, assist1: $('#assist1').value, assist2: $('#assist2').value, assist3: $('#assist3').value, indication: $('#indication').value, findings: $('#findings').value, notes: $('#notes').value, hpe: $('#hpe').value, postop: $('#postop').value });
           await saveStaged(st, { pid, category: cat || 'Other', takenAt: date, refType: 'surgery', refId: sid, caption: proc });
         });
         toast('Surgery saved'); back();
@@ -1706,7 +1730,13 @@ Views.surgeryForm = async ({ pid, id }) => {
     bind: root => {
       Views._sst = bindAttach($('#sattach'));
       $('#duration').oninput = e => { $('#durl').textContent = fmtDur(e.target.value); };
-      $('#procs').onclick = e => { const b = e.target.closest('[data-p]'); if (!b) return; $('#proc').value = b.dataset.p; $$('#procs .chip').forEach(x => x.classList.toggle('on', x === b)); };
+      $('#procs').onclick = e => {
+        const b = e.target.closest('[data-p]'); if (!b) return; $('#proc').value = b.dataset.p; $$('#procs .chip').forEach(x => x.classList.toggle('on', x === b));
+        const pr = SURG_PRESETS[b.dataset.p]; if (!pr) return;
+        const prev = SURG_PRESETS[Views._lastPreset] || {}; let n = 0; ['indication', 'findings', 'notes', 'postop'].forEach(k => { const el = $('#' + k); if (pr[k] && (!el.value.trim() || el.value === prev[k])) { el.value = pr[k]; n++; } }); Views._lastPreset = b.dataset.p;
+        if (n) toast('Preset filled - complete the __ blanks');
+      };
+      $('#sides').onclick = e => { const b = e.target.closest('[data-sd]'); if (!b) return; side = side === b.dataset.sd ? null : b.dataset.sd; $$('#sides .chip').forEach(x => x.classList.toggle('on', x.dataset.sd === side)); };
       $('#scats').onclick = e => { const c = e.target.closest('[data-c]'); if (!c) return; cat = c.dataset.c; $$('#scats .chip').forEach(x => x.classList.toggle('on', x === c)); };
       const ex = $('#sex');
       if (ex) ex.onclick = async e => { const b = e.target.closest('[data-del]'); if (!b) return; if (await confirmDlg('Remove attachment?', 'This cannot be undone.', 'Remove', true)) { await Repo.delMedia(media.find(x => x.id === +b.dataset.del)); b.parentElement.remove(); } };
@@ -1769,7 +1799,7 @@ async function logRows() {
   const l = await Repo.allSurgeries(); const q = LSTATE.q.trim().toLowerCase();
   return q ? l.filter(s => [s.procedure, s.pname, s.uhid, ...assistants(s)].some(x => x && String(x).toLowerCase().includes(q))) : l;
 }
-const logCard = s => '<div class="card tap" data-act="editLog" data-pid="' + s.patientId + '" data-id="' + s.id + '"><div style="display:flex;gap:10px;align-items:center"><div class="iconbox">' + ic('scalpel', 22) + '</div><div style="flex:1;min-width:0"><div class="t-name" style="white-space:normal">' + esc(s.procedure) + '</div><div class="t-sub" style="white-space:normal"><b>' + esc(s.pname) + '</b><br>' + esc(s.uhid) + '</div></div><div style="text-align:right"><div class="small"><b style="color:var(--navy)">' + fmt(s.date) + '</b></div>' + (s.duration ? '<div class="small">' + fmtDur(s.duration) + '</div>' : '') + '</div></div>' +
+const logCard = s => '<div class="card tap" data-act="editLog" data-pid="' + s.patientId + '" data-id="' + s.id + '"><div style="display:flex;gap:10px;align-items:center"><div class="iconbox">' + ic('scalpel', 22) + '</div><div style="flex:1;min-width:0"><div class="t-name" style="white-space:normal">' + esc(s.procedure) + (s.side && s.side !== 'NA' ? ' <span class="pill">' + esc(s.side) + '</span>' : '') + '</div><div class="t-sub" style="white-space:normal"><b>' + esc(s.pname) + '</b><br>' + esc(s.uhid) + '</div></div><div style="text-align:right"><div class="small"><b style="color:var(--navy)">' + fmt(s.date) + '</b></div>' + (s.duration ? '<div class="small">' + fmtDur(s.duration) + '</div>' : '') + '</div></div>' +
   (assistants(s).length ? '<div class="small" style="margin-top:8px;color:var(--navy)">Assistants: ' + esc(assistants(s).join(', ')) + '</div>' : '') + '</div>';
 Views.allSurgeries = async () => {
   const all = await Repo.allSurgeries(); const l = await logRows();

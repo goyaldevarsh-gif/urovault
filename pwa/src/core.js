@@ -1,6 +1,6 @@
 'use strict';
 /* ===================== UroVault PWA - core: utils, icons, db, repo ===================== */
-const APP_VERSION = '1.7.2';
+const APP_VERSION = '1.8.0';
 const BUILD_ID = '__BUILD__';
 const COPYRIGHT = '&copy; 2026 Dr. Devarsh Goyal. All rights reserved.';
 const copyFoot = () => '<div class="small" style="text-align:center;margin:22px 0 4px;opacity:.85">' + COPYRIGHT + '<br>UroVault v' + APP_VERSION + '</div>';
@@ -20,7 +20,19 @@ const LATERALITY = ['Right', 'Left', 'Bilateral'];
 const INV_OPTIONS = ['RFT', 'CBC', 'Urine Analysis', 'Urine Culture', 'PSA', 'CT', 'MRI', 'DTPA', 'PET CT', 'Other'];
 const INV_ICON = { 'RFT': 'flask', 'CBC': 'drop', 'Urine Analysis': 'drop', 'Urine Culture': 'flask', 'PSA': 'drop', 'CT': 'scan', 'MRI': 'scan', 'DTPA': 'activity', 'PET CT': 'scan', 'Other': 'file' };
 const MEDIA_CATS = ['Clinical', 'Pre-op', 'Post-op', 'Follow-up', 'CT', 'MRI', 'Other'];
-const PROCEDURES = ['TURBT', 'TURP', 'PCNL', 'URS + DJ stenting', 'RIRS', 'Radical nephrectomy', 'Pyeloplasty', 'Radical prostatectomy', 'Cystoscopy'];
+const PROCEDURES = ['TURBT', 'TURP', 'PCNL', 'URS + DJ stenting', 'DJ stenting', 'DJ stent removal', 'RIRS', 'Radical nephrectomy', 'Pyeloplasty', 'Radical prostatectomy', 'Cystoscopy'];
+const SIDES = ['Right', 'Left', 'Bilateral', 'NA'];
+/* Procedure presets: only fill EMPTY fields; "__" marks blanks to complete. Edit freely. */
+const SURG_PRESETS = {
+  'TURP': { indication: 'BPH with LUTS / retention, not responding to medical therapy', findings: 'Prostate __ g, __ lobes. Urethra __. Bladder __.', notes: 'Anaesthesia: __. Lithotomy. Cystourethroscopy, then resection (monopolar/bipolar) of prostate, haemostasis secured, chips evacuated. __ Fr 3-way catheter placed with irrigation.', postop: 'Continuous bladder irrigation until clear. Catheter removal on POD __, then trial without catheter. Chips sent for HPE.' },
+  'URS + DJ stenting': { indication: 'Ureteric calculus __ mm, __ ureter (__ side)', findings: 'Stone at __. Ureter __. Mucosa __.', notes: 'Anaesthesia: __. Lithotomy. Semirigid/flexible URS, stone fragmented with __ (holmium/pneumatic), fragments retrieved. DJ stent __ Fr x __ cm placed. Guidewire __.', postop: 'DJ stent removal planned at __ weeks. Fluids, analgesics, alpha-blocker. Stone analysis if retrieved.' },
+  'PCNL': { indication: 'Renal calculus __ mm, __ side, __', findings: 'Stone burden __. Access via __ calyx. Collecting system __.', notes: 'GA. Ureteric catheter placed, then prone. Access via __ calyx under fluoroscopy, tract dilated to __ Fr, stone fragmented and cleared with __. Nephrostomy/tubeless, DJ stent __.', postop: 'Check Hb. Nephrostomy removal POD __. X-ray KUB for residual fragments.' },
+  'DJ stenting': { indication: '__ (e.g. obstructing calculus / pre-op decompression / post-URS)', findings: 'Under vision: __', notes: 'Cystoscopy, guidewire passed to __ pelvis, DJ stent __ Fr x __ cm placed, position confirmed.', postop: 'Stent to be removed/replaced on __.' },
+  'DJ stent removal': { indication: 'Stent in situ since __; stone/procedure completed', findings: 'Stent __ (encrusted? Y/N)', notes: 'Cystoscopy, stent grasped and removed intact.', postop: 'Review if fever, haematuria or flank pain.' },
+  'RIRS': { indication: 'Renal calculus __ mm, __ side', findings: 'Stone at __. Access sheath __.', notes: 'GA. Flexible URS with access sheath, stone fragmented with holmium laser, basketed. DJ stent __.', postop: 'Stent removal planned at __ weeks.' },
+  'TURBT': { indication: 'Bladder tumour on imaging/cystoscopy', findings: 'Tumour(s): number __, size __ cm, site __, appearance __.', notes: 'Anaesthesia: __. Resection of tumour with base biopsy/muscle sampling __. Haemostasis secured. Catheter __ Fr.', postop: 'Catheter removal POD __. HPE to guide further treatment (single dose intravesical chemo: __).' },
+  'Cystoscopy': { indication: '__', findings: 'Urethra __. Prostate __. Bladder __. Ureteric orifices __.', notes: 'Diagnostic cystoscopy with __ scope under __ anaesthesia.', postop: '' }
+};
 const INTERVALS = ['1 week', '2 weeks', '1 month', '3 months', '6 months', '1 year'];
 const STATUSES = ['Improving', 'Stable', 'Worsening'];
 const FILTERS = ['All', 'Renal', 'Bladder', 'Prostate', 'Other'];
@@ -292,7 +304,7 @@ const Repo = {
   },
   async saveSurgery(s) {
     const rec = Object.assign({}, s);
-    ['indication', 'notes', 'findings', 'hpe', 'postop', 'assist1', 'assist2', 'assist3'].forEach(k => { rec[k] = nn(rec[k]); });
+    ['indication', 'notes', 'findings', 'hpe', 'postop', 'assist1', 'assist2', 'assist3', 'side'].forEach(k => { rec[k] = nn(rec[k]); });
     rec.duration = rec.duration ? Math.max(0, Math.round(Number(rec.duration))) || null : null;
     rec.procedure = rec.procedure.trim();
     if (!rec.id) { rec.createdAt = new Date().toISOString(); delete rec.id; }

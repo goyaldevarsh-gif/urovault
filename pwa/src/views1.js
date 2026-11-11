@@ -134,24 +134,35 @@ Views.home = async () => {
 };
 
 /* ---------------- patients list ---------------- */
-const PSTATE = { q: '', f: 'All', focus: false };
+const PSTATE = { q: '', f: 'All', proc: '', yr: '', focus: false };
 Views.patients = async () => {
   const all = (await Repo.patients()).sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+  const sg = new Map(); (await Repo.allSurgeries()).forEach(x => { (sg.get(x.patientId) || sg.set(x.patientId, []).get(x.patientId)).push(x); });
+  const procs = [...new Set([].concat(...[...sg.values()]).map(x => x.procedure))].sort();
+  const yrs = [...new Set([].concat(...[...sg.values()]).map(x => String(x.date).slice(0, 4)))].sort().reverse();
   const list = () => {
     const q = PSTATE.q.trim().toLowerCase();
-    return all.filter(p => matchesGroup((p.dx || []).map(d => d.name), PSTATE.f) &&
-      (!q || [p.name, p.uhid, p.mobile, p.cc, p.addDx, ...(p.dx || []).map(d => d.name)].some(x => x && String(x).toLowerCase().includes(q))));
+    return all.filter(p => {
+      const ss = sg.get(p.id) || [];
+      if (!matchesGroup((p.dx || []).map(d => d.name), PSTATE.f)) return false;
+      if ((PSTATE.proc || PSTATE.yr) && !ss.some(x => (!PSTATE.proc || x.procedure === PSTATE.proc) && (!PSTATE.yr || String(x.date).slice(0, 4) === PSTATE.yr))) return false;
+      return !q || [p.name, p.uhid, p.mobile, p.cc, p.addDx, ...(p.dx || []).map(d => d.name), ...ss.map(x => x.procedure)].some(x => x && String(x).toLowerCase().includes(q));
+    });
   };
   const body = () => { const l = list(); return l.length ? l.map(ptile).join('') : (all.length ? emptyBox('search', 'No matches', 'Try a different search or filter.') : emptyBox('users', 'No patients yet', 'Tap + to register your first patient.')); };
+  const row = (id, lab, arr, cur) => arr.length ? '<div class="chips" id="' + id + '" style="max-width:640px;margin:0 auto"><span class="small" style="align-self:center;margin-right:2px">' + lab + '</span>' + ['Any'].concat(arr).map(x => '<button class="chip sm ' + ((cur || 'Any') === x ? 'on' : '') + '" data-v="' + esc(x) + '">' + esc(x) + '</button>').join('') + '</div>' : '';
+  const cnt = () => list().length + ' of ' + all.length + ' patients' + ((PSTATE.proc || PSTATE.yr) ? ' &middot; ' + esc([PSTATE.proc, PSTATE.yr].filter(Boolean).join(' ')) : '');
   return {
     html: hdr('Patients', { back: false }) +
-      '<div class="wrap"><div class="sticky-search"><div class="sch">' + ic('search', 20) + '<input class="inp" id="q" type="search" placeholder="Search name, UHID, diagnosis" value="' + esc(PSTATE.q) + '"></div></div></div>' +
+      '<div class="wrap"><div class="sticky-search"><div class="sch">' + ic('search', 20) + '<input class="inp" id="q" type="search" placeholder="Search name, UHID, diagnosis, procedure" value="' + esc(PSTATE.q) + '"></div></div></div>' +
       '<div class="chips" id="pf" style="max-width:640px;margin:0 auto">' + FILTERS.map(f => '<button class="chip ' + (PSTATE.f === f ? 'on' : '') + '" data-f="' + f + '">' + f + '</button>').join('') + '</div>' +
-      wrapPage('<div class="small" id="pcount" style="margin:2px 2px 8px">' + list().length + ' of ' + all.length + ' patients</div><div id="plist">' + body() + '</div>', true) + navbar('patients'),
+      row('pp', 'Procedure', procs, PSTATE.proc) + row('py', 'Year', yrs, PSTATE.yr) +
+      wrapPage('<div class="small" id="pcount" style="margin:2px 2px 8px">' + cnt() + '</div><div id="plist">' + body() + '</div>', true) + navbar('patients'),
     bind: root => {
-      const upd = () => { $('#plist').innerHTML = body(); $('#pcount').textContent = list().length + ' of ' + all.length + ' patients'; };
+      const upd = () => { $('#plist').innerHTML = body(); $('#pcount').innerHTML = cnt(); };
       $('#q').oninput = debounce(e => { PSTATE.q = e.target.value; upd(); }, 120);
       $('#pf').onclick = e => { const b = e.target.closest('[data-f]'); if (!b) return; PSTATE.f = b.dataset.f; $$('#pf .chip').forEach(x => x.classList.toggle('on', x === b)); upd(); };
+      [['pp', 'proc'], ['py', 'yr']].forEach(([id, k]) => { const el = $('#' + id); if (el) el.onclick = e => { const b = e.target.closest('[data-v]'); if (!b) return; PSTATE[k] = b.dataset.v === 'Any' ? '' : b.dataset.v; $$('#' + id + ' .chip').forEach(x => x.classList.toggle('on', x === b)); upd(); }; });
       if (PSTATE.focus) { PSTATE.focus = false; $('#q').focus(); }
     }
   };
