@@ -1,6 +1,6 @@
 'use strict';
 /* ===================== UroVault PWA - core: utils, icons, db, repo ===================== */
-const APP_VERSION = '1.3.4';
+const APP_VERSION = '1.4.0';
 const BUILD_ID = '__BUILD__';
 const COPYRIGHT = '&copy; 2026 Dr. Devarsh Goyal. All rights reserved.';
 const copyFoot = () => '<div class="small" style="text-align:center;margin:22px 0 4px;opacity:.85">' + COPYRIGHT + '<br>UroVault v' + APP_VERSION + '</div>';
@@ -406,6 +406,43 @@ const Repo = {
   },
   async eraseAll() { for (const n of STORES) await dbClear(n); _urls.clear(); }
 };
+
+
+/* ---------------- encrypted backup (AES-GCM, PBKDF2 passphrase, chunked) ---------------- */
+const UVB_MAGIC = [85, 86, 66, 75, 49]; /* "UVBK1" */
+const UVB_CHUNK = 4 * 1048576;
+async function uvbKey(pass, salt) {
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 250000, hash: 'SHA-256' }, km, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+function uvbIv(base, i) { const iv = new Uint8Array(base); const dv = new DataView(iv.buffer); dv.setUint32(8, (dv.getUint32(8) ^ i) >>> 0); return iv; }
+const u32 = n => { const b = new Uint8Array(4); new DataView(b.buffer).setUint32(0, n); return b; };
+async function encryptBlob(blob, pass) {
+  const salt = crypto.getRandomValues(new Uint8Array(16)), iv0 = crypto.getRandomValues(new Uint8Array(12));
+  const key = await uvbKey(pass, salt), n = Math.max(1, Math.ceil(blob.size / UVB_CHUNK));
+  const parts = [new Uint8Array(UVB_MAGIC), salt, iv0, u32(n)];
+  for (let i = 0; i < n; i++) {
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: uvbIv(iv0, i) }, key, await blob.slice(i * UVB_CHUNK, (i + 1) * UVB_CHUNK).arrayBuffer()));
+    parts.push(u32(ct.length), ct);
+  }
+  return new Blob(parts, { type: 'application/octet-stream' });
+}
+async function isEncryptedBackup(file) {
+  const h = new Uint8Array(await file.slice(0, 5).arrayBuffer());
+  return h.length === 5 && UVB_MAGIC.every((v, i) => h[i] === v);
+}
+async function decryptBlob(file, pass) {
+  const hd = new Uint8Array(await file.slice(0, 37).arrayBuffer());
+  const salt = hd.slice(5, 21), iv0 = hd.slice(21, 33), n = new DataView(hd.buffer).getUint32(33);
+  const key = await uvbKey(pass, salt); let off = 37; const out = [];
+  try {
+    for (let i = 0; i < n; i++) {
+      const len = new DataView(await file.slice(off, off + 4).arrayBuffer()).getUint32(0); off += 4;
+      out.push(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: uvbIv(iv0, i) }, key, await file.slice(off, off + len).arrayBuffer())); off += len;
+    }
+  } catch (e) { throw new Error('Wrong passphrase, or the file is damaged'); }
+  return new Blob(out, { type: 'application/json' });
+}
 
 /* ---------------- auth (local account, PBKDF2) ---------------- */
 const enc = new TextEncoder();

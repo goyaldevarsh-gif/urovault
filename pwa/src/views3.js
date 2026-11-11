@@ -77,6 +77,24 @@ Views.printList = async () => {
 
 /* ---- backup / restore ---- */
 let _bk = null; // prepared backup {blob,name}
+
+function askPass(title, confirm, allowPlain) {
+  return new Promise(res => {
+    sheet('<h3>' + title + '</h3><div class="small" style="margin-bottom:8px">' + (confirm ? 'This passphrase encrypts the backup file. <b>If you forget it, the backup cannot be opened by anyone, including me.</b> Write it down somewhere safe.' : 'Enter the passphrase used when this backup was created.') + '</div><label class="lbl">Passphrase</label><input class="inp" type="password" id="pp1" autocomplete="off">' + (confirm ? '<label class="lbl">Confirm passphrase</label><input class="inp" type="password" id="pp2" autocomplete="off">' : '') + '<div class="ferr" id="ppe"></div><div style="height:12px"></div><button class="btn" id="ppok">Continue</button>' + (allowPlain ? '<button class="btn o" style="margin-top:8px" id="ppno">Save without encryption</button>' : '') + '<button class="linkbtn" style="display:block;margin:12px auto 0" id="ppx">Cancel</button>', (s, close) => {
+      let done = false; const mo = new MutationObserver(() => { if (!document.body.contains(s)) fin(null); }); const fin = v => { if (done) return; done = true; mo.disconnect(); close(); res(v); };
+      mo.observe(document.body, { childList: true });
+      $('#ppx', s).onclick = () => fin(null);
+      if (allowPlain) $('#ppno', s).onclick = () => fin('');
+      $('#ppok', s).onclick = () => {
+        const a = $('#pp1', s).value, e = $('#ppe', s);
+        if (a.length < 8) return e.textContent = 'Use at least 8 characters';
+        if (confirm && a !== $('#pp2', s).value) return e.textContent = 'Passphrases do not match';
+        fin(a);
+      };
+    });
+  });
+}
+
 Views.backup = async () => {
   const [last, c] = await Promise.all([metaGet('lastBackup'), Repo.counts()]);
   return {
@@ -87,10 +105,13 @@ Views.backup = async () => {
       '<div class="sec"><h2>Restore</h2></div><div class="small" style="margin-bottom:8px">Restoring replaces everything currently on this device.</div><button class="btn o" data-act="restore">' + ic('upload', 18) + ' Choose backup file</button>'),
     acts: {
       prep: async () => {
+        const pass = await askPass('Protect this backup', true, true);
+        if (pass === null) return;
         const b = busy('Preparing backup...');
         try {
-          const blob = await Repo.buildBackup((k, n) => b.set('Packing images ' + k + ' / ' + n));
-          _bk = { blob, name: 'urovault-backup-' + iso(today()) + '.json' };
+          let blob = await Repo.buildBackup((k, n) => b.set('Packing images ' + k + ' / ' + n));
+          if (pass) { b.set('Encrypting...'); blob = await encryptBlob(blob, pass); }
+          _bk = { blob, name: 'urovault-backup-' + iso(today()) + (pass ? '.uvb' : '.json') };
         } catch (e) { b.done(); return alertDlg('Backup failed', e.message); }
         b.done();
         $('#bkbox').innerHTML = '<div class="card tap" style="display:flex;gap:10px;align-items:center;background:var(--greent);border-color:#6EE7B7">' + ic('check', 22) + '<div><b>Backup ready</b><div class="small">' + (_bk.blob.size / 1048576).toFixed(1) + ' MB</div></div></div><button class="btn" data-act="saveBk">' + ic('share', 20) + ' Save / Share backup</button>';
@@ -101,10 +122,12 @@ Views.backup = async () => {
         if (r !== 'cancelled') { await metaSet('lastBackup', new Date().toISOString()); await Repo.audit('export', 'backup'); toast(r === 'shared' ? 'Backup shared' : 'Backup saved to downloads'); }
       },
       restore: async () => {
-        const fs = await pickFiles({ accept: '.json,application/json' }); if (!fs.length) return;
+        const fs = await pickFiles({ accept: '' }); if (!fs.length) return;
+        const enc = await isEncryptedBackup(fs[0]); let src = fs[0];
+        if (enc) { const pw = await askPass('Backup passphrase', false, false); if (pw === null) return; const bz = busy('Decrypting...'); try { src = await decryptBlob(fs[0], pw); } catch (e) { bz.done(); return alertDlg('Cannot open backup', e.message); } bz.done(); }
         if (!await confirmDlg('Replace all data?', 'Everything on this device will be replaced with the backup (' + fs[0].name + ').', 'Restore', true)) return;
         const b = busy('Restoring...');
-        try { await Repo.restoreBackup(await fs[0].text()); b.done(); toast('Restore complete'); setTab('home'); }
+        try { await Repo.restoreBackup(await src.text()); b.done(); toast('Restore complete'); setTab('home'); }
         catch (e) { b.done(); alertDlg('Restore failed', e.message || 'Invalid file'); }
       }
     }
