@@ -231,8 +231,8 @@ input[type=date].inp{min-height:50px;display:block;text-align:left;-webkit-min-l
 <script>
 'use strict';
 /* ===================== UroVault PWA - core: utils, icons, db, repo ===================== */
-const APP_VERSION = '1.7.1';
-const BUILD_ID = '20261111084131';
+const APP_VERSION = '1.7.2';
+const BUILD_ID = '20261111084925';
 const COPYRIGHT = '&copy; 2026 Dr. Devarsh Goyal. All rights reserved.';
 const copyFoot = () => '<div class="small" style="text-align:center;margin:22px 0 4px;opacity:.85">' + COPYRIGHT + '<br>UroVault v' + APP_VERSION + '</div>';
 
@@ -1973,6 +1973,21 @@ function syCard() {
   return '<div class="card"><div class="small" style="margin-bottom:8px">Auto-backup of all patients and photos to your own Supabase project, <b>encrypted on this phone</b> using your UroVault password. </div><button class="btn" data-act="syOn">' + ic('upload', 18) + ' Turn on cloud sync</button></div>';
 }
 
+function rcResetSheet() {
+  return sheet('<h3>Reset with recovery code</h3><div class="small" style="margin-bottom:8px">Enter the recovery code you saved. Your data stays as it is. Old encrypted backups will still need the old password.</div><label class="lbl">Recovery code</label><input class="inp" id="rc1" autocapitalize="characters" autocorrect="off" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX"><label class="lbl">New password</label><input class="inp" id="rc2" type="password" autocomplete="new-password" placeholder="At least 8 characters"><div class="ferr" id="rce"></div><div style="height:12px"></div><button class="btn" id="rcok">Reset password</button>', (sh, close) => {
+    $('#rcok', sh).onclick = async () => {
+      const r = await Auth.rc(), e = $('#rce', sh);
+      if (!r || !r.ack) return e.textContent = 'No saved recovery code exists on this device';
+      if (rcNorm($('#rc1', sh).value) !== rcNorm(r.code)) return e.textContent = 'That recovery code is not correct';
+      const np = $('#rc2', sh).value; if (np.length < 8) return e.textContent = 'Password must be at least 8 characters';
+      const a = await Auth.acct();
+      await withBusy('Resetting...', () => Auth.setPassword(np)); close();
+      if (SY.cfg && SY.cfg.on) { try { await withBusy('Updating cloud...', () => syRekey(a.id, null, np)); } catch (x) { await syDisconnect(); toast('Password reset. Cloud sync paused - turn it on again in Settings.'); return; } }
+      toast('Password reset');
+    };
+  });
+}
+
 Views.settings = async () => {
   const [lockOn, demo, est, persisted, aiKey, aiModel, aiProv0, acc, rcs] = await Promise.all([metaGet('lockOn'), Repo.hasDemo(), (navigator.storage && navigator.storage.estimate ? navigator.storage.estimate() : Promise.resolve(null)), (navigator.storage && navigator.storage.persisted ? navigator.storage.persisted() : Promise.resolve(false)), metaGet('aiKey'), metaGet('aiModel'), metaGet('aiProv'), Auth.acct(), Auth.rc()]);
   const aiProv = aiProv0 || 'gemini';
@@ -2013,7 +2028,8 @@ Views.settings = async () => {
       viewRc: async () => { const pw = await askPw('Show recovery code', 'Enter your password to view it.', false); if (pw === null) return; if (!await Auth.verify(acc.id, pw)) return alertDlg('Incorrect password', 'Try again.'); go('recovery'); },
       logout: async () => { if (!await confirmDlg('Log out?', 'You will need your password to open UroVault again. Your data and cloud sync stay as they are.', 'Log out')) return; lockNow(); },
       lockTog: async () => { await metaSet('lockOn', !on); refresh(); },
-      chpw: () => sheet('<h3>Change password</h3><label class="lbl">Current password</label><input class="inp" type="password" id="cp0"><label class="lbl">New password</label><input class="inp" type="password" id="cp1" placeholder="At least 8 characters"><label class="lbl">Confirm new password</label><input class="inp" type="password" id="cp2"><div class="ferr" id="cpe"></div><div style="height:14px"></div><button class="btn" id="cps">Update</button>', (s, close) => {
+      chpw: () => sheet('<h3>Change password</h3><label class="lbl">Current password</label><input class="inp" type="password" id="cp0"><label class="lbl">New password</label><input class="inp" type="password" id="cp1" placeholder="At least 8 characters"><label class="lbl">Confirm new password</label><input class="inp" type="password" id="cp2"><div class="ferr" id="cpe"></div><div style="height:14px"></div><button class="btn" id="cps">Update</button><button class="linkbtn" style="display:block;margin:14px auto 0" id="cprc">Forgot current password? Use recovery code</button>', (s, close) => {
+        $('#cprc', s).onclick = () => { close(); rcResetSheet(); };
         $('#cps', s).onclick = async () => {
           const a = await Auth.acct(); const e = $('#cpe', s);
           if (!await Auth.verify(a.id, $('#cp0', s).value)) return e.textContent = 'Current password is incorrect';
@@ -2022,7 +2038,7 @@ Views.settings = async () => {
           const oldPw = $('#cp0', s).value, newPw = $('#cp1', s).value;
           await withBusy('Updating...', () => Auth.setPassword(newPw)); close();
           if (SY.cfg && SY.cfg.on) { try { await withBusy('Re-encrypting cloud data...', () => syRekey(a.id, oldPw, newPw)); toast('Password changed. Cloud updated.'); } catch (x) { await syDisconnect(); alertDlg('Cloud sync paused', 'Password changed, but the cloud could not be updated (' + (x.message || 'error') + '). Turn cloud sync on again in Settings.'); } }
-          else toast('Password changed'); if (SY.cfg && SY.cfg.on) alertDlg('Cloud sync note', 'Cloud sync was set up with your OLD password and keeps working on this phone. On a new phone, create the account with the OLD password, or Disconnect and set up sync again here with the new one.');
+          else toast('Password changed');
         };
       }),
       loadDemo: async () => { await withBusy('Loading...', () => Repo.loadDemo()); toast('Sample patients added'); refresh(); },
