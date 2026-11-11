@@ -135,6 +135,16 @@ Views.backup = async () => {
 };
 
 /* ---- settings ---- */
+ACT.copySql = async () => { try { await navigator.clipboard.writeText(SY_SQL); toast('SQL copied'); } catch (e) { alertDlg('Copy failed', 'Long-press the text below and copy it manually.'); } };
+function syCard() {
+  const c = SY.cfg;
+  if (c && c.on) {
+    const pend = Object.keys(SY.q).length;
+    return '<div class="card"><div class="kv"><span>Status</span><span style="color:' + (SY.err ? 'var(--redd)' : 'var(--greend)') + '">' + (SY.err ? 'Error' : 'Connected') + '</span></div><div class="kv"><span>Account</span><span>' + esc(c.email) + '</span></div><div class="kv"><span>Last sync</span><span>' + (c.last ? fmtDT(c.last) : 'Not yet') + '</span></div><div class="kv"><span>Waiting to upload</span><span>' + pend + '</span></div>' + (SY.err ? '<div class="small" style="color:var(--redd);margin-top:6px">' + esc(SY.err) + '</div>' : '') + '</div><div style="height:10px"></div><button class="btn" data-act="syNow">' + ic('refresh', 18) + ' Sync now</button><button class="btn o" style="margin-top:8px;color:var(--redd)" data-act="syOff">Disconnect cloud sync</button><div class="small" style="margin-top:8px">End-to-end encrypted. Syncs automatically while the app is open.</div>';
+  }
+  return '<div class="card"><div class="small" style="margin-bottom:8px">Auto-backup of all patients and photos to your own Supabase project, <b>encrypted on this phone</b> with your sync passphrase. Setup steps are in Help &amp; About.</div><button class="btn" data-act="syOn">' + ic('upload', 18) + ' Set up cloud sync</button></div>';
+}
+
 Views.settings = async () => {
   const [lockOn, demo, est, persisted, aiKey, aiModel, aiProv0] = await Promise.all([metaGet('lockOn'), Repo.hasDemo(), (navigator.storage && navigator.storage.estimate ? navigator.storage.estimate() : Promise.resolve(null)), (navigator.storage && navigator.storage.persisted ? navigator.storage.persisted() : Promise.resolve(false)), metaGet('aiKey'), metaGet('aiModel'), metaGet('aiProv')]);
   const aiProv = aiProv0 || 'gemini';
@@ -143,6 +153,7 @@ Views.settings = async () => {
     html: hdr('Settings') + wrapPage(
       '<div class="card mrow"><div class="iconbox">' + ic('lock', 20) + '</div><div class="grow"><div class="t">Require password</div><div class="s">Asked on open and after 2 min away</div></div><button class="sw ' + (on ? 'on' : '') + '" data-act="lockTog" aria-label="Toggle"></button></div>' +
       mrow('chpw', 'edit', 'Change password') +
+      '<div class="sec"><h2>Cloud sync</h2></div>' + syCard() +
       '<div class="sec"><h2>App update</h2></div><div class="card"><div class="kv"><span>Installed version</span><span>v' + APP_VERSION + '</span></div><div class="kv"><span>Status</span><span>' + (UPDATE_AVAILABLE ? 'Update available' : 'Not checked / up to date') + '</span></div></div><div style="height:10px"></div><button class="btn" data-act="updCheck">' + ic('refresh', 18) + ' Check &amp; update to latest</button><div class="small" style="margin-top:8px">Always loads the newest version, even if the update banner did not appear. Your patient data stays safe.</div>' +
       '<div class="sec"><h2>AI assistant (optional)</h2></div><div class="card"><div class="small" style="margin-bottom:8px">Used only for "Review with AI" in EAU Guidance. Your key is stored on this device only. Patient identity is never sent.</div><label class="lbl">Provider</label><div class="chips wrapchips" id="aip"><button type="button" class="chip sm ' + (aiProv === 'gemini' ? 'on' : '') + '" data-act="aiProv" data-p="gemini">Google Gemini (free tier)</button><button type="button" class="chip sm ' + (aiProv === 'anthropic' ? 'on' : '') + '" data-act="aiProv" data-p="anthropic">Anthropic</button></div><label class="lbl">API key</label><input class="inp" type="password" id="aik" placeholder="Paste API key" value="' + esc(aiKey || '') + '" autocomplete="off"><label class="lbl">Model</label><input class="inp" id="aim" value="' + esc((aiModel && aiModel !== 'gemini-2.5-flash' ? aiModel : '') || (aiProv === 'gemini' ? 'gemini-3.8-flash' : 'claude-sonnet-5-5')) + '"><div style="height:10px"></div><button class="btn sm" data-act="aiSave">Save</button><button class="btn o sm" style="margin-top:8px" data-act="aiTest">Test key &amp; list models</button><div id="aiTr" class="small" style="margin-top:8px"></div></div>' +
       '<div class="sec"><h2>Sample data</h2></div>' + (demo ? mrow('clearDemo', 'trash', 'Remove sample patients', 'Deletes the 4 demo records') : mrow('loadDemo', 'plusc', 'Load sample patients', 'Four fictional patients to explore the app')) +
@@ -150,6 +161,23 @@ Views.settings = async () => {
       '<div class="sec"><h2>Danger zone</h2></div><button class="btn o" style="color:var(--redd);border-color:var(--red)" data-act="erase">' + ic('trash', 18) + ' Erase all data</button>'),
     acts: {
       aiProv: async el => { await metaSet('aiProv', el.dataset.p); await metaSet('aiModel', ''); refresh(); },
+      syNow: async () => { await syncNow(true); refresh(); },
+      syOff: async () => { if (!await confirmDlg('Disconnect cloud sync?', 'Data already in the cloud stays there. This device stops syncing.', 'Disconnect', true)) return; await syDisconnect(); refresh(); },
+      syOn: () => sheet('<h3>Cloud sync setup</h3><label class="lbl">Supabase project URL</label><input class="inp" id="sy1" placeholder="https://xxxx.supabase.co" autocapitalize="off" autocorrect="off"><label class="lbl">Supabase anon (public) key</label><input class="inp" id="sy2" autocapitalize="off" autocorrect="off"><label class="lbl">Cloud account email</label><input class="inp" id="sy3" type="email" autocapitalize="off"><label class="lbl">Cloud account password</label><input class="inp" id="sy4" type="password"><label class="lbl">Sync passphrase (encrypts your data)</label><input class="inp" id="sy5" type="password" placeholder="At least 8 characters"><div class="small" style="margin-top:6px"><b>Do not lose the sync passphrase.</b> Without it nobody can decrypt the cloud copy. On a new phone you enter the same details.</div><div class="ferr" id="sye"></div><div style="height:12px"></div><button class="btn" id="syg">Connect</button>', (s, close) => {
+        $('#syg', s).onclick = async () => {
+          const f = { url: $('#sy1', s).value, anon: $('#sy2', s).value, email: $('#sy3', s).value, pw: $('#sy4', s).value, pass: $('#sy5', s).value }, e = $('#sye', s);
+          if (!/^https:\/\//.test(f.url) || !f.anon.trim() || !f.email.trim() || f.pw.length < 6) return e.textContent = 'Fill URL, key, email and a password (6+ chars)';
+          if (f.pass.length < 8) return e.textContent = 'Sync passphrase needs 8+ characters';
+          let st;
+          try { st = await withBusy('Connecting...', () => syConnect(f)); } catch (x) { SY.cfg = null; SY.key = null; return e.textContent = x.message || 'Failed'; }
+          close();
+          let mode = 'push';
+          if (st.hasRemote && st.hasLocal) { if (!await confirmDlg('Cloud already has data', 'This device also has data. Use the cloud copy and REPLACE what is on this phone? (Take a backup first if unsure.)', 'Use cloud data', true)) { SY.cfg = null; SY.key = null; return; } mode = 'pull'; }
+          else if (st.hasRemote) mode = 'pull';
+          await withBusy(mode === 'pull' ? 'Downloading from cloud...' : 'Uploading to cloud...', () => syEnable(mode));
+          toast('Cloud sync is on'); refresh();
+        };
+      }),
       aiTest: async () => {
         const key = $('#aik').value.trim(); if (!key) return toast('Paste the key first');
         const el = $('#aiTr'); el.textContent = 'Testing...';
@@ -200,6 +228,7 @@ Views.help = async () => ({
     '<div class="card"><b>Install on iPhone</b><div class="small" style="color:var(--navy);margin-top:6px">Open this page in Safari, tap Share, then <b>Add to Home Screen</b>. Open it from the icon afterwards.</div></div>' +
     '<div class="card"><b>Getting updates</b><div class="small" style="color:var(--navy);margin-top:6px">After a new version is published, fully close the app and reopen it twice. Your data is kept.</div></div>' +
     '<div class="card"><b>Registering quickly</b><div class="small" style="color:var(--navy);margin-top:6px">Tap the + button, enter UHID, name, age, sex and complaints, then pick the diagnosis with one tap. Everything else can be added later from the patient profile.</div></div>' +
+    '<div class="card"><b>Cloud sync setup (one time)</b><div class="small" style="color:var(--navy);margin-top:6px;line-height:1.55">1. Make a free project at supabase.com.<br>2. Open <b>SQL Editor</b>, paste the SQL (button below) and press Run.<br>3. <b>Authentication &rarr; Sign In / Providers &rarr; Email</b>: turn OFF "Confirm email".<br>4. <b>Project Settings &rarr; API</b>: copy the Project URL and the <b>anon public</b> key (never the service_role key).<br>5. Settings &rarr; Cloud sync &rarr; Set up. Choose any email and password for the cloud account, and a sync passphrase.</div><div style="height:10px"></div><button class="btn o" data-act="copySql">Copy setup SQL</button></div>' +
     '<div class="card"><b>Keep backups</b><div class="small" style="color:var(--navy);margin-top:6px">Browsers can clear site data. Use More &rarr; Backup &amp; Restore at least weekly and keep the file in iCloud Drive or on your computer.</div></div>')
 });
 
@@ -207,6 +236,7 @@ Views.help = async () => ({
 async function start() {
   try { await dbOpen(); } catch (e) { app.innerHTML = '<div class="auth"><div class="in"><h1>Storage unavailable</h1><p class="sub2">UroVault could not open its local database. Private browsing mode blocks this - open the app in a normal Safari tab or from the Home Screen.</p></div></div>'; return; }
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* ignore */ }
+  try { await syLoad(); } catch (e) { /* sync is optional */ }
   STACK = [{ view: 'splash' }]; render();
   const has = await Auth.has();
   const lockOn = (await metaGet('lockOn')) !== false;

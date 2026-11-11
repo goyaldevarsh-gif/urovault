@@ -231,8 +231,8 @@ input[type=date].inp{min-height:50px;display:block;text-align:left;-webkit-min-l
 <script>
 'use strict';
 /* ===================== UroVault PWA - core: utils, icons, db, repo ===================== */
-const APP_VERSION = '1.4.0';
-const BUILD_ID = '20261111075434';
+const APP_VERSION = '1.5.0';
+const BUILD_ID = '20261111075935';
 const COPYRIGHT = '&copy; 2026 Dr. Devarsh Goyal. All rights reserved.';
 const copyFoot = () => '<div class="small" style="text-align:center;margin:22px 0 4px;opacity:.85">' + COPYRIGHT + '<br>UroVault v' + APP_VERSION + '</div>';
 
@@ -392,8 +392,9 @@ const rq = q => new Promise((res, rej) => { q.onsuccess = () => res(q.result); q
 const store = (n, m) => _db.transaction(n, m || 'readonly').objectStore(n);
 const dbAll = n => rq(store(n).getAll());
 const dbGet = (n, id) => rq(store(n).get(id));
-const dbPut = (n, o) => rq(store(n, 'readwrite').put(o));
-const dbDel = (n, id) => rq(store(n, 'readwrite').delete(id));
+let SYNCHOOK = null;
+const dbPut = (n, o) => rq(store(n, 'readwrite').put(o)).then(r => { if (SYNCHOOK && n !== 'meta') SYNCHOOK('put', n, o, r); return r; });
+const dbDel = (n, id) => rq(store(n, 'readwrite').delete(id)).then(r => { if (SYNCHOOK && n !== 'meta') SYNCHOOK('del', n, id); return r; });
 const dbBy = (n, pid) => rq(store(n).index('patientId').getAll(pid));
 const dbClear = n => rq(store(n, 'readwrite').clear());
 const metaGet = async k => { const r = await dbGet('meta', k); return r ? r.value : null; };
@@ -697,6 +698,175 @@ const Auth = {
   acct: () => metaGet('acct'),
   async setName(n) { const a = await metaGet('acct'); a.name = n.trim(); await metaSet('acct', a); }
 };
+
+/* ===================== Cloud sync (Supabase, end-to-end encrypted) =====================
+   Everything is encrypted on this device with your sync passphrase (AES-256-GCM) before upload.
+   The server only ever stores ciphertext. Last write wins per record. */
+const SY = { cfg: null, key: null, q: {}, busy: false, applying: false, timer: null, err: '' };
+const SY_STORES = ['patients', 'investigations', 'surgeries', 'followups', 'notes', 'media'];
+const b64e = u => { let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+const b64d = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function syEnc(u8) { const iv = crypto.getRandomValues(new Uint8Array(12)); const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, SY.key, u8)); const o = new Uint8Array(12 + ct.length); o.set(iv); o.set(ct, 12); return o; }
+async function syDec(u8) { return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: u8.slice(0, 12) }, SY.key, u8.slice(12))); }
+const syJ = async o => b64e(await syEnc(new TextEncoder().encode(JSON.stringify(o))));
+const syUnJ = async s => JSON.parse(new TextDecoder().decode(await syDec(b64d(s))));
+
+async function syRaw(url, opt) {
+  const ac = new AbortController(), t = setTimeout(() => ac.abort(), 60000);
+  try { return await fetch(url, Object.assign({ signal: ac.signal }, opt)); }
+  catch (e) { throw new Error(e.name === 'AbortError' ? 'Sync timed out' : 'Offline or network error'); }
+  finally { clearTimeout(t); }
+}
+const syErr = async r => { try { const j = await r.json(); return j.message || j.msg || j.error_description || j.error || ('HTTP ' + r.status); } catch (e) { return 'HTTP ' + r.status; } };
+function syTokens(j) { const c = SY.cfg; c.access = j.access_token; c.refresh = j.refresh_token; c.exp = Date.now() + (j.expires_in || 3600) * 1000; }
+const syCfgSave = () => metaSet('syncCfg', SY.cfg);
+async function syTok(force) {
+  const c = SY.cfg; if (!force && c.exp - Date.now() > 60000) return c.access;
+  const r = await syRaw(c.url + '/auth/v1/token?grant_type=refresh_token', { method: 'POST', headers: { apikey: c.anon, 'content-type': 'application/json' }, body: JSON.stringify({ refresh_token: c.refresh }) });
+  if (!r.ok) throw new Error('Cloud session expired. Reconnect in Settings > Cloud sync.');
+  syTokens(await r.json()); await syCfgSave(); return c.access;
+}
+async function syReq(path, o) {
+  o = o || {}; const c = SY.cfg;
+  const go = t => syRaw(c.url + path, { method: o.method || 'GET', headers: Object.assign({ apikey: c.anon, Authorization: 'Bearer ' + t }, o.headers || {}), body: o.body });
+  let r = await go(await syTok());
+  if (r.status === 401) r = await go(await syTok(true));
+  return r;
+}
+const syStoragePath = id => '/storage/v1/object/' + 'media/' + SY.cfg.uid + '/' + id + '.bin';
+const syStorage = (m, id, body) => m === 'GET' ? syReq('/storage/v1/object/authenticated/media/' + SY.cfg.uid + '/' + id + '.bin') : m === 'DELETE' ? syReq(syStoragePath(id), { method: 'DELETE' }) : syReq(syStoragePath(id), { method: 'POST', headers: { 'content-type': 'application/octet-stream', 'x-upsert': 'true' }, body });
+
+/* ---- change queue ---- */
+SYNCHOOK = (op, n, o, r) => {
+  if (!SY.cfg || !SY.cfg.on || SY.applying) return;
+  if (n !== 'blobs' && !SY_STORES.includes(n)) return;
+  const id = op === 'put' ? (o && o.id != null ? o.id : r) : o;
+  SY.q[n + ':' + id] = { op, mt: Date.now() };
+  metaSet('syncq', SY.q); syKick();
+};
+function syKick() { clearTimeout(SY.timer); SY.timer = setTimeout(() => syncNow(false), 4000); }
+async function syQueueAll() {
+  for (const n of SY_STORES.concat(['blobs'])) for (const r of await dbAll(n)) SY.q[n + ':' + r.id] = { op: 'put', mt: Date.now() };
+  await metaSet('syncq', SY.q);
+}
+
+async function syPush() {
+  const keys = Object.keys(SY.q); let done = 0;
+  for (let i = 0; i < keys.length; i += 25) {
+    const rows = [], sent = [];
+    for (const k of keys.slice(i, i + 25)) {
+      const it = SY.q[k], p = k.split(':'), n = p[0], id = Number(p[1]);
+      const rec = it.op === 'put' ? await dbGet(n, id) : null;
+      if (!rec) { rows.push({ k, d: null, mt: it.mt, del: true, dev: SY.cfg.dev }); if (n === 'blobs') await syStorage('DELETE', id).catch(() => { }); }
+      else if (n === 'blobs') {
+        const up = await syStorage('POST', id, new Blob([await syEnc(new Uint8Array(await rec.blob.arrayBuffer()))]));
+        if (!up.ok) throw new Error('Photo upload failed: ' + await syErr(up));
+        rows.push({ k, d: await syJ({ type: rec.blob.type }), mt: it.mt, del: false, dev: SY.cfg.dev });
+      } else rows.push({ k, d: await syJ(rec), mt: it.mt, del: false, dev: SY.cfg.dev });
+      sent.push([k, it.mt]);
+    }
+    const r = await syReq('/rest/v1/records?on_conflict=user_id,k', { method: 'POST', headers: { 'content-type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) });
+    if (!r.ok) throw new Error(await syErr(r));
+    sent.forEach(([k, mt]) => { if (SY.q[k] && SY.q[k].mt === mt) delete SY.q[k]; });
+    done += rows.length; await metaSet('syncq', SY.q);
+  }
+  return done;
+}
+async function syPull() {
+  let applied = 0;
+  for (;;) {
+    const cur = SY.cfg.cursor ? '&srv=gt.' + encodeURIComponent(SY.cfg.cursor) : '';
+    const r = await syReq('/rest/v1/records?select=k,d,mt,del,srv,dev&order=srv.asc&limit=100' + cur);
+    if (!r.ok) throw new Error(await syErr(r));
+    const rows = await r.json(); if (!rows.length) break;
+    for (const row of rows) {
+      SY.cfg.cursor = row.srv;
+      if (row.k.startsWith('meta:') || row.dev === SY.cfg.dev) continue;
+      const qi = SY.q[row.k]; if (qi && qi.mt >= row.mt) continue;
+      if (qi) delete SY.q[row.k];
+      const p = row.k.split(':'), n = p[0], id = Number(p[1]);
+      SY.applying = true;
+      try {
+        if (row.del) { await dbDel(n, id); freeUrl(id); }
+        else if (n === 'blobs') {
+          const meta = await syUnJ(row.d); const g = await syStorage('GET', id);
+          if (!g.ok) throw new Error('Photo download failed');
+          const bytes = await syDec(new Uint8Array(await g.arrayBuffer()));
+          await dbPut('blobs', { id, blob: new Blob([bytes], { type: meta.type }) }); freeUrl(id);
+        } else await dbPut(n, await syUnJ(row.d));
+        applied++;
+      } catch (e) { if (!(e && e.name === 'ConstraintError')) throw e; }
+      finally { SY.applying = false; }
+    }
+    await syCfgSave(); await metaSet('syncq', SY.q);
+    if (rows.length < 100) break;
+  }
+  return applied;
+}
+async function syncNow(manual) {
+  if (!SY.cfg || !SY.cfg.on || !SY.key || SY.busy) return;
+  SY.busy = true;
+  try {
+    const got = await syPull(); await syPush();
+    SY.cfg.last = new Date().toISOString(); SY.err = ''; await syCfgSave();
+    const top = STACK[STACK.length - 1];
+    if (got && top && ['home', 'patients', 'followups', 'more'].includes(top.view)) refresh();
+    if (manual) toast(got ? 'Synced - ' + got + ' change(s) from cloud' : 'Cloud is up to date');
+  } catch (e) { SY.err = e.message || String(e); if (manual) toast(SY.err); }
+  finally { SY.busy = false; }
+}
+async function syLoad() {
+  const cfg = await metaGet('syncCfg'); if (!cfg || !cfg.on) return;
+  SY.cfg = cfg; SY.key = await metaGet('syncKey'); SY.q = (await metaGet('syncq')) || {};
+  if (!SY.key) { SY.cfg = null; return; }
+  setTimeout(() => syncNow(false), 3000); syLoops();
+}
+function syLoops() {
+  if (SY.loops) return; SY.loops = true;
+  setInterval(() => syncNow(false), 5 * 60 * 1000);
+  window.addEventListener('online', () => syncNow(false));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) syncNow(false); });
+}
+
+/* ---- connect / disconnect ---- */
+async function syConnect(f) {
+  const url = f.url.trim().replace(/\/+$/, ''), cfg = { url, anon: f.anon.trim(), email: f.email.trim(), dev: crypto.randomUUID(), on: false, cursor: null };
+  SY.cfg = cfg;
+  const H = { apikey: cfg.anon, 'content-type': 'application/json' }, body = JSON.stringify({ email: cfg.email, password: f.pw });
+  let r = await syRaw(url + '/auth/v1/token?grant_type=password', { method: 'POST', headers: H, body }), j = await r.json();
+  if (!r.ok) {
+    const r2 = await syRaw(url + '/auth/v1/signup', { method: 'POST', headers: H, body }), j2 = await r2.json();
+    if (!r2.ok) throw new Error(/already/i.test(JSON.stringify(j2)) ? 'Wrong password for this email' : (j2.msg || j2.message || j2.error_description || 'Login failed'));
+    if (!j2.access_token) throw new Error('Account created, but email confirmation is ON. In Supabase go to Authentication > Providers > Email, turn off "Confirm email", then connect again.');
+    j = j2;
+  }
+  syTokens(j); cfg.uid = j.user.id;
+  const rs = await (await syReq('/rest/v1/records?select=d&k=eq.meta:salt')).json();
+  let salt;
+  if (Array.isArray(rs) && rs.length) salt = b64d(rs[0].d);
+  else {
+    salt = crypto.getRandomValues(new Uint8Array(16));
+    const w = await syReq('/rest/v1/records?on_conflict=user_id,k', { method: 'POST', headers: { 'content-type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify([{ k: 'meta:salt', d: b64e(salt), mt: Date.now(), del: false, dev: cfg.dev }]) });
+    if (!w.ok) throw new Error((await syErr(w)) + ' - did you run the SQL setup in Supabase?');
+  }
+  SY.key = await uvbKey(f.pass, salt);
+  const chk = await (await syReq('/rest/v1/records?select=d&k=eq.meta:check')).json();
+  if (Array.isArray(chk) && chk.length) { try { await syDec(b64d(chk[0].d)); } catch (e) { throw new Error('Wrong sync passphrase for this account'); } }
+  else await syReq('/rest/v1/records?on_conflict=user_id,k', { method: 'POST', headers: { 'content-type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify([{ k: 'meta:check', d: b64e(await syEnc(new TextEncoder().encode('ok'))), mt: Date.now(), del: false, dev: cfg.dev }]) });
+  const rem = await (await syReq('/rest/v1/records?select=k&k=not.like.meta:*&limit=1')).json();
+  return { hasRemote: Array.isArray(rem) && rem.length > 0, hasLocal: (await dbAll('patients')).length > 0 };
+}
+async function syEnable(mode) {
+  /* mode: 'push' (cloud empty) | 'pull' (replace local with cloud) */
+  if (mode === 'pull') { SY.applying = true; try { for (const n of SY_STORES.concat(['blobs'])) await dbClear(n); } finally { SY.applying = false; } _urls.forEach(u => URL.revokeObjectURL(u)); _urls.clear(); SY.q = {}; SY.cfg.cursor = null; }
+  SY.cfg.on = true; await metaSet('syncKey', SY.key); await syCfgSave();
+  if (mode === 'push') await syQueueAll(); else await metaSet('syncq', {});
+  SY.busy = false; await syncNow(true);
+  syLoops();
+}
+async function syDisconnect() { if (SY.cfg) SY.cfg.on = false; SY.cfg = null; SY.key = null; SY.q = {}; await metaSet('syncCfg', null); await metaSet('syncKey', null); await metaSet('syncq', {}); }
+
+const SY_SQL = "create table if not exists public.records (\n  user_id uuid not null default auth.uid(),\n  k text not null,\n  d text,\n  mt bigint not null,\n  del boolean not null default false,\n  dev text,\n  srv timestamptz not null default now(),\n  primary key (user_id, k)\n);\ncreate index if not exists records_srv on public.records (user_id, srv);\ncreate or replace function public.touch_srv() returns trigger language plpgsql as $$ begin new.srv := clock_timestamp(); return new; end $$;\ndrop trigger if exists records_touch on public.records;\ncreate trigger records_touch before insert or update on public.records for each row execute function public.touch_srv();\nalter table public.records enable row level security;\ndrop policy if exists own_records on public.records;\ncreate policy own_records on public.records for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());\ninsert into storage.buckets (id, name, public) values ('media', 'media', false) on conflict (id) do nothing;\ndrop policy if exists own_media on storage.objects;\ncreate policy own_media on storage.objects for all to authenticated using (bucket_id = 'media' and (storage.foldername(name))[1] = auth.uid()::text) with check (bucket_id = 'media' and (storage.foldername(name))[1] = auth.uid()::text);\n";
 
 /* ===================== UroVault PWA - ui infrastructure ===================== */
 const app = $('#app');
@@ -1716,6 +1886,16 @@ Views.backup = async () => {
 };
 
 /* ---- settings ---- */
+ACT.copySql = async () => { try { await navigator.clipboard.writeText(SY_SQL); toast('SQL copied'); } catch (e) { alertDlg('Copy failed', 'Long-press the text below and copy it manually.'); } };
+function syCard() {
+  const c = SY.cfg;
+  if (c && c.on) {
+    const pend = Object.keys(SY.q).length;
+    return '<div class="card"><div class="kv"><span>Status</span><span style="color:' + (SY.err ? 'var(--redd)' : 'var(--greend)') + '">' + (SY.err ? 'Error' : 'Connected') + '</span></div><div class="kv"><span>Account</span><span>' + esc(c.email) + '</span></div><div class="kv"><span>Last sync</span><span>' + (c.last ? fmtDT(c.last) : 'Not yet') + '</span></div><div class="kv"><span>Waiting to upload</span><span>' + pend + '</span></div>' + (SY.err ? '<div class="small" style="color:var(--redd);margin-top:6px">' + esc(SY.err) + '</div>' : '') + '</div><div style="height:10px"></div><button class="btn" data-act="syNow">' + ic('refresh', 18) + ' Sync now</button><button class="btn o" style="margin-top:8px;color:var(--redd)" data-act="syOff">Disconnect cloud sync</button><div class="small" style="margin-top:8px">End-to-end encrypted. Syncs automatically while the app is open.</div>';
+  }
+  return '<div class="card"><div class="small" style="margin-bottom:8px">Auto-backup of all patients and photos to your own Supabase project, <b>encrypted on this phone</b> with your sync passphrase. Setup steps are in Help &amp; About.</div><button class="btn" data-act="syOn">' + ic('upload', 18) + ' Set up cloud sync</button></div>';
+}
+
 Views.settings = async () => {
   const [lockOn, demo, est, persisted, aiKey, aiModel, aiProv0] = await Promise.all([metaGet('lockOn'), Repo.hasDemo(), (navigator.storage && navigator.storage.estimate ? navigator.storage.estimate() : Promise.resolve(null)), (navigator.storage && navigator.storage.persisted ? navigator.storage.persisted() : Promise.resolve(false)), metaGet('aiKey'), metaGet('aiModel'), metaGet('aiProv')]);
   const aiProv = aiProv0 || 'gemini';
@@ -1724,6 +1904,7 @@ Views.settings = async () => {
     html: hdr('Settings') + wrapPage(
       '<div class="card mrow"><div class="iconbox">' + ic('lock', 20) + '</div><div class="grow"><div class="t">Require password</div><div class="s">Asked on open and after 2 min away</div></div><button class="sw ' + (on ? 'on' : '') + '" data-act="lockTog" aria-label="Toggle"></button></div>' +
       mrow('chpw', 'edit', 'Change password') +
+      '<div class="sec"><h2>Cloud sync</h2></div>' + syCard() +
       '<div class="sec"><h2>App update</h2></div><div class="card"><div class="kv"><span>Installed version</span><span>v' + APP_VERSION + '</span></div><div class="kv"><span>Status</span><span>' + (UPDATE_AVAILABLE ? 'Update available' : 'Not checked / up to date') + '</span></div></div><div style="height:10px"></div><button class="btn" data-act="updCheck">' + ic('refresh', 18) + ' Check &amp; update to latest</button><div class="small" style="margin-top:8px">Always loads the newest version, even if the update banner did not appear. Your patient data stays safe.</div>' +
       '<div class="sec"><h2>AI assistant (optional)</h2></div><div class="card"><div class="small" style="margin-bottom:8px">Used only for "Review with AI" in EAU Guidance. Your key is stored on this device only. Patient identity is never sent.</div><label class="lbl">Provider</label><div class="chips wrapchips" id="aip"><button type="button" class="chip sm ' + (aiProv === 'gemini' ? 'on' : '') + '" data-act="aiProv" data-p="gemini">Google Gemini (free tier)</button><button type="button" class="chip sm ' + (aiProv === 'anthropic' ? 'on' : '') + '" data-act="aiProv" data-p="anthropic">Anthropic</button></div><label class="lbl">API key</label><input class="inp" type="password" id="aik" placeholder="Paste API key" value="' + esc(aiKey || '') + '" autocomplete="off"><label class="lbl">Model</label><input class="inp" id="aim" value="' + esc((aiModel && aiModel !== 'gemini-2.5-flash' ? aiModel : '') || (aiProv === 'gemini' ? 'gemini-3.8-flash' : 'claude-sonnet-5-5')) + '"><div style="height:10px"></div><button class="btn sm" data-act="aiSave">Save</button><button class="btn o sm" style="margin-top:8px" data-act="aiTest">Test key &amp; list models</button><div id="aiTr" class="small" style="margin-top:8px"></div></div>' +
       '<div class="sec"><h2>Sample data</h2></div>' + (demo ? mrow('clearDemo', 'trash', 'Remove sample patients', 'Deletes the 4 demo records') : mrow('loadDemo', 'plusc', 'Load sample patients', 'Four fictional patients to explore the app')) +
@@ -1731,6 +1912,23 @@ Views.settings = async () => {
       '<div class="sec"><h2>Danger zone</h2></div><button class="btn o" style="color:var(--redd);border-color:var(--red)" data-act="erase">' + ic('trash', 18) + ' Erase all data</button>'),
     acts: {
       aiProv: async el => { await metaSet('aiProv', el.dataset.p); await metaSet('aiModel', ''); refresh(); },
+      syNow: async () => { await syncNow(true); refresh(); },
+      syOff: async () => { if (!await confirmDlg('Disconnect cloud sync?', 'Data already in the cloud stays there. This device stops syncing.', 'Disconnect', true)) return; await syDisconnect(); refresh(); },
+      syOn: () => sheet('<h3>Cloud sync setup</h3><label class="lbl">Supabase project URL</label><input class="inp" id="sy1" placeholder="https://xxxx.supabase.co" autocapitalize="off" autocorrect="off"><label class="lbl">Supabase anon (public) key</label><input class="inp" id="sy2" autocapitalize="off" autocorrect="off"><label class="lbl">Cloud account email</label><input class="inp" id="sy3" type="email" autocapitalize="off"><label class="lbl">Cloud account password</label><input class="inp" id="sy4" type="password"><label class="lbl">Sync passphrase (encrypts your data)</label><input class="inp" id="sy5" type="password" placeholder="At least 8 characters"><div class="small" style="margin-top:6px"><b>Do not lose the sync passphrase.</b> Without it nobody can decrypt the cloud copy. On a new phone you enter the same details.</div><div class="ferr" id="sye"></div><div style="height:12px"></div><button class="btn" id="syg">Connect</button>', (s, close) => {
+        $('#syg', s).onclick = async () => {
+          const f = { url: $('#sy1', s).value, anon: $('#sy2', s).value, email: $('#sy3', s).value, pw: $('#sy4', s).value, pass: $('#sy5', s).value }, e = $('#sye', s);
+          if (!/^https:\/\//.test(f.url) || !f.anon.trim() || !f.email.trim() || f.pw.length < 6) return e.textContent = 'Fill URL, key, email and a password (6+ chars)';
+          if (f.pass.length < 8) return e.textContent = 'Sync passphrase needs 8+ characters';
+          let st;
+          try { st = await withBusy('Connecting...', () => syConnect(f)); } catch (x) { SY.cfg = null; SY.key = null; return e.textContent = x.message || 'Failed'; }
+          close();
+          let mode = 'push';
+          if (st.hasRemote && st.hasLocal) { if (!await confirmDlg('Cloud already has data', 'This device also has data. Use the cloud copy and REPLACE what is on this phone? (Take a backup first if unsure.)', 'Use cloud data', true)) { SY.cfg = null; SY.key = null; return; } mode = 'pull'; }
+          else if (st.hasRemote) mode = 'pull';
+          await withBusy(mode === 'pull' ? 'Downloading from cloud...' : 'Uploading to cloud...', () => syEnable(mode));
+          toast('Cloud sync is on'); refresh();
+        };
+      }),
       aiTest: async () => {
         const key = $('#aik').value.trim(); if (!key) return toast('Paste the key first');
         const el = $('#aiTr'); el.textContent = 'Testing...';
@@ -1781,6 +1979,7 @@ Views.help = async () => ({
     '<div class="card"><b>Install on iPhone</b><div class="small" style="color:var(--navy);margin-top:6px">Open this page in Safari, tap Share, then <b>Add to Home Screen</b>. Open it from the icon afterwards.</div></div>' +
     '<div class="card"><b>Getting updates</b><div class="small" style="color:var(--navy);margin-top:6px">After a new version is published, fully close the app and reopen it twice. Your data is kept.</div></div>' +
     '<div class="card"><b>Registering quickly</b><div class="small" style="color:var(--navy);margin-top:6px">Tap the + button, enter UHID, name, age, sex and complaints, then pick the diagnosis with one tap. Everything else can be added later from the patient profile.</div></div>' +
+    '<div class="card"><b>Cloud sync setup (one time)</b><div class="small" style="color:var(--navy);margin-top:6px;line-height:1.55">1. Make a free project at supabase.com.<br>2. Open <b>SQL Editor</b>, paste the SQL (button below) and press Run.<br>3. <b>Authentication &rarr; Sign In / Providers &rarr; Email</b>: turn OFF "Confirm email".<br>4. <b>Project Settings &rarr; API</b>: copy the Project URL and the <b>anon public</b> key (never the service_role key).<br>5. Settings &rarr; Cloud sync &rarr; Set up. Choose any email and password for the cloud account, and a sync passphrase.</div><div style="height:10px"></div><button class="btn o" data-act="copySql">Copy setup SQL</button></div>' +
     '<div class="card"><b>Keep backups</b><div class="small" style="color:var(--navy);margin-top:6px">Browsers can clear site data. Use More &rarr; Backup &amp; Restore at least weekly and keep the file in iCloud Drive or on your computer.</div></div>')
 });
 
@@ -1788,6 +1987,7 @@ Views.help = async () => ({
 async function start() {
   try { await dbOpen(); } catch (e) { app.innerHTML = '<div class="auth"><div class="in"><h1>Storage unavailable</h1><p class="sub2">UroVault could not open its local database. Private browsing mode blocks this - open the app in a normal Safari tab or from the Home Screen.</p></div></div>'; return; }
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* ignore */ }
+  try { await syLoad(); } catch (e) { /* sync is optional */ }
   STACK = [{ view: 'splash' }]; render();
   const has = await Auth.has();
   const lockOn = (await metaGet('lockOn')) !== false;

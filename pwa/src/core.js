@@ -1,6 +1,6 @@
 'use strict';
 /* ===================== UroVault PWA - core: utils, icons, db, repo ===================== */
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.5.0';
 const BUILD_ID = '__BUILD__';
 const COPYRIGHT = '&copy; 2026 Dr. Devarsh Goyal. All rights reserved.';
 const copyFoot = () => '<div class="small" style="text-align:center;margin:22px 0 4px;opacity:.85">' + COPYRIGHT + '<br>UroVault v' + APP_VERSION + '</div>';
@@ -161,8 +161,9 @@ const rq = q => new Promise((res, rej) => { q.onsuccess = () => res(q.result); q
 const store = (n, m) => _db.transaction(n, m || 'readonly').objectStore(n);
 const dbAll = n => rq(store(n).getAll());
 const dbGet = (n, id) => rq(store(n).get(id));
-const dbPut = (n, o) => rq(store(n, 'readwrite').put(o));
-const dbDel = (n, id) => rq(store(n, 'readwrite').delete(id));
+let SYNCHOOK = null;
+const dbPut = (n, o) => rq(store(n, 'readwrite').put(o)).then(r => { if (SYNCHOOK && n !== 'meta') SYNCHOOK('put', n, o, r); return r; });
+const dbDel = (n, id) => rq(store(n, 'readwrite').delete(id)).then(r => { if (SYNCHOOK && n !== 'meta') SYNCHOOK('del', n, id); return r; });
 const dbBy = (n, pid) => rq(store(n).index('patientId').getAll(pid));
 const dbClear = n => rq(store(n, 'readwrite').clear());
 const metaGet = async k => { const r = await dbGet('meta', k); return r ? r.value : null; };

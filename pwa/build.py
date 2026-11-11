@@ -6,7 +6,7 @@ src = root / 'src'
 css = (src / 'style.css').read_text()
 css = re.sub(r'/\*.*?\*/', '', css, flags=re.S)
 css = re.sub(r'\n\s*\n+', '\n', css)
-js = '\n'.join((src / f).read_text() for f in ['core.js', 'ui.js', 'views1.js', 'views2.js', 'views3.js', 'views4.js', 'views5.js'])
+js = '\n'.join((src / f).read_text() for f in ['core.js', 'sync.js', 'ui.js', 'views1.js', 'views2.js', 'views3.js', 'views4.js', 'views5.js'])
 build = datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
 js = js.replace('__BUILD__', build)
 js = js.replace("'use strict';\n", '')
