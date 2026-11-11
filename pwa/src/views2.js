@@ -6,7 +6,6 @@ const TABS = [['overview', 'Overview'], ['media', 'Media'], ['inv', 'Investigati
 Views.profile = async (params) => {
   const pid = params.id;
   const p = await Repo.patient(pid);
-  const acct = p ? await Auth.acct() : null;
   if (!p) return { html: hdr('Patient') + wrapPage(emptyBox('alert', 'Patient not found', 'This record may have been deleted.')) };
   let tab = params.tab || 'overview';
   let mcat = 'All';
@@ -73,7 +72,6 @@ Views.profile = async (params) => {
     return '<div class="sec"><h2>Next Follow-up</h2></div>' + (pend ?
       '<div class="card"><div style="display:flex;align-items:center;gap:10px"><div class="big-date" style="flex:1">' + fmt(pend.date) + '</div><span class="pill ' + (dayDiff(pend.date) < 0 ? 'red' : dayDiff(pend.date) === 0 ? 'amber' : '') + '">' + esc(relDays(pend.date)) + '</span></div>' +
       '<div class="row" style="margin-top:12px"><button class="btn sm" data-act="visit">Record visit</button><button class="btn o sm" data-act="chgDate">Change date</button></div>' +
-      '<div class="row" style="margin-top:8px"><button class="btn o sm" data-act="fuWa" data-d="' + pend.date + '">WhatsApp reminder</button><button class="btn o sm" data-act="fuIcs" data-d="' + pend.date + '" data-id="' + pend.id + '">Add to Calendar</button></div>' +
       '<div style="text-align:center;margin-top:8px"><button class="linkbtn" style="color:var(--redd)" data-act="cancelFu" data-id="' + pend.id + '">Cancel follow-up</button></div></div>' :
       '<div class="card"><div class="small" style="margin-bottom:10px">None scheduled. Schedule after:</div><div class="chips wrapchips">' + INTERVALS.map(i => '<button class="chip sm" data-act="quickSched" data-i="' + i + '">' + i + '</button>').join('') + '</div>' +
       '<div style="margin-top:12px"><button class="btn sm" data-act="visit">Record a visit now</button></div></div>') +
@@ -97,16 +95,6 @@ Views.profile = async (params) => {
   };
 
   const acts = {
-    fuWa: el => {
-      if (!p.mobile) return toast('No mobile number saved for this patient');
-      const dr = 'Dr. ' + acct.name.replace(/^dr\.?\s*/i, '');
-      const dt = new Date(el.dataset.d + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-      window.open(waLink(p.mobile, 'Namaste ' + p.name + ', ' + dr + ' ki OPD mein aapki follow-up ' + dt + ' ko hai. Kripya apni purani reports aur dawaiyan saath laayein. Koi dikkat ho to bata dijiye.'), '_blank');
-    },
-    fuIcs: async el => {
-      const r = await shareOrSave(icsBlob(el.dataset.id, el.dataset.d, 'Follow-up: UHID ' + p.uhid, 'UroVault follow-up'), 'followup-' + p.uhid.replace(/[^A-Za-z0-9]+/g, '-') + '.ics');
-      if (r !== 'cancelled') toast(r === 'shared' ? 'Open the file to add to Calendar' : 'Saved - open to add to Calendar');
-    },
     ptab: el => { tab = el.dataset.t; window.scrollTo(0, 0); fill(); },
     mcat: el => { mcat = el.dataset.c; fill(); },
     menu: () => sheet('<h3>' + esc(p.name) + '</h3><div style="height:8px"></div>' +
@@ -216,7 +204,7 @@ Views.surgeryForm = async ({ pid, id }) => {
   const pt = await Repo.patient(pid);
   const v = s || {};
   const media = s ? (await Repo.media(pid)).filter(m => m.refType === 'surgery' && m.refId === s.id) : [];
-  let cat = null, stOn = !!v.stent;
+  let cat = null;
   const ta = (k, l, ph) => '<label class="lbl">' + l + '</label><textarea class="ta" id="' + k + '" style="min-height:84px" placeholder="' + ph + '">' + esc(v[k] || '') + '</textarea>';
   return {
     html: hdr(s ? 'Edit Surgery' : 'Add Surgery') + wrapPage(
@@ -224,8 +212,6 @@ Views.surgeryForm = async ({ pid, id }) => {
       '<label class="lbl" style="margin-top:4px">Procedure <i>*</i></label><div class="chips wrapchips" id="procs">' + PROCEDURES.map(x => '<button type="button" class="chip sm ' + (v.procedure === x ? 'on' : '') + '" data-p="' + esc(x) + '">' + esc(x) + '</button>').join('') + '</div>' +
       '<input class="inp" id="proc" style="margin-top:10px" placeholder="Procedure name (type or pick above)" value="' + esc(v.procedure || '') + '">' +
       '<label class="lbl">Date <i>*</i></label><input class="inp" type="date" id="sdate" value="' + (v.date || iso(today())) + '">' +
-      '<label class="lbl">DJ stent placed?</label><div class="chips wrapchips" id="stsel"><button type="button" class="chip sm ' + (!v.stent ? 'on' : '') + '" data-s="0">No</button><button type="button" class="chip sm ' + (v.stent ? 'on' : '') + '" data-s="1">Yes</button></div>' +
-      '<div id="stbox" style="display:' + (v.stent ? 'block' : 'none') + '"><label class="lbl">Planned stent removal date</label><input class="inp" type="date" id="stdue" value="' + esc(v.stentDue || '') + '"><div class="small" style="margin-top:4px">Shown on Home until marked removed.</div><label class="lbl">Stent removed on (leave empty if still in)</label><input class="inp" type="date" id="strem" value="' + esc(v.stentRemoved || '') + '"></div>' +
       '<label class="lbl">Duration of surgery (minutes)</label><input class="inp" id="duration" type="number" inputmode="numeric" min="0" max="1440" placeholder="e.g. 90" value="' + esc(v.duration || '') + '"><div class="small" id="durl" style="margin-top:5px">' + esc(fmtDur(v.duration)) + '</div>' +
       '<label class="lbl">Assistants</label>' + [1, 2, 3].map(n => '<input class="inp" id="assist' + n + '" style="margin-bottom:8px" placeholder="Assistant ' + n + '" value="' + esc(v['assist' + n] || '') + '">').join('') +
       ta('indication', 'Indication', 'Why was it done?') + ta('findings', 'Operative findings', 'Findings') + ta('notes', 'Operative notes', 'Technique, complications') +
@@ -241,7 +227,7 @@ Views.surgeryForm = async ({ pid, id }) => {
         if (!date) return toast('Date is required');
         const st = Views._sst;
         await withBusy('Saving...', async () => {
-          const sid = await Repo.saveSurgery({ id: s ? s.id : undefined, createdAt: s ? s.createdAt : undefined, patientId: pid, procedure: proc, date, duration: $('#duration').value, stent: stOn, stentDue: stOn ? ($('#stdue').value || null) : null, stentRemoved: stOn ? ($('#strem').value || null) : null, assist1: $('#assist1').value, assist2: $('#assist2').value, assist3: $('#assist3').value, indication: $('#indication').value, findings: $('#findings').value, notes: $('#notes').value, hpe: $('#hpe').value, postop: $('#postop').value });
+          const sid = await Repo.saveSurgery({ id: s ? s.id : undefined, createdAt: s ? s.createdAt : undefined, patientId: pid, procedure: proc, date, duration: $('#duration').value, assist1: $('#assist1').value, assist2: $('#assist2').value, assist3: $('#assist3').value, indication: $('#indication').value, findings: $('#findings').value, notes: $('#notes').value, hpe: $('#hpe').value, postop: $('#postop').value });
           await saveStaged(st, { pid, category: cat || 'Other', takenAt: date, refType: 'surgery', refId: sid, caption: proc });
         });
         toast('Surgery saved'); back();
@@ -250,7 +236,6 @@ Views.surgeryForm = async ({ pid, id }) => {
     },
     bind: root => {
       Views._sst = bindAttach($('#sattach'));
-      $('#stsel').onclick = e => { const b = e.target.closest('[data-s]'); if (!b) return; stOn = b.dataset.s === '1'; $$('#stsel .chip').forEach(x => x.classList.toggle('on', x === b)); $('#stbox').style.display = stOn ? 'block' : 'none'; if (stOn && !$('#stdue').value) { const d = new Date(($('#sdate').value || iso(today())) + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 21); $('#stdue').value = d.toISOString().slice(0, 10); } };
       $('#duration').oninput = e => { $('#durl').textContent = fmtDur(e.target.value); };
       $('#procs').onclick = e => { const b = e.target.closest('[data-p]'); if (!b) return; $('#proc').value = b.dataset.p; $$('#procs .chip').forEach(x => x.classList.toggle('on', x === b)); };
       $('#scats').onclick = e => { const c = e.target.closest('[data-c]'); if (!c) return; cat = c.dataset.c; $$('#scats .chip').forEach(x => x.classList.toggle('on', x === c)); };

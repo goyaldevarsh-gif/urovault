@@ -68,7 +68,7 @@ function lockNow() { if (!SESSION.unlocked) return; SESSION.unlocked = false; ST
 
 /* ---------------- home ---------------- */
 Views.home = async () => {
-  const [a, c, pend, ps, lastBk, stents] = await Promise.all([Auth.acct(), Repo.counts(), Repo.pending(), Repo.patients(), metaGet('lastBackup'), Repo.stents()]);
+  const [a, c, pend, ps, lastBk] = await Promise.all([Auth.acct(), Repo.counts(), Repo.pending(), Repo.patients(), metaGet('lastBackup')]);
   const t = iso(today());
   const due = pend.filter(f => f.date <= t).slice(0, 5);
   const recent = ps.slice().sort((x, y) => (y.updatedAt || '').localeCompare(x.updatedAt || '')).slice(0, 5);
@@ -91,15 +91,12 @@ Views.home = async () => {
         '<button data-act="caseSeries"><div class="iconbox">' + ic('file', 22) + '</div>Case Series</button></div>' +
         '<div class="sec"><h2>Follow-ups Due</h2><button data-act="tab" data-v="followups">View all</button></div>' +
         (due.length ? due.map(fuTile).join('') : '<div class="card small" style="text-align:center;padding:22px">Nothing due. You are all caught up.</div>') +
-        (stents.length ? '<div class="sec"><h2>DJ Stents in situ</h2></div>' + stents.slice(0, 8).map(({ s, p }) => { const dd = s.stentDue ? dayDiff(s.stentDue) : null, pc = dd === null ? 'grey' : dd < 0 ? 'red' : dd <= 7 ? 'amber' : ''; return '<div class="card tile"><div class="grow" data-act="openSurg" data-id="' + p.id + '"><div class="t-name">' + esc(p.name) + '</div><div class="t-sub"><b>' + esc(p.uhid) + '</b> &middot; ' + esc(s.procedure) + '</div><div style="margin-top:6px"><span class="pill ' + pc + '">' + (s.stentDue ? (dd < 0 ? 'Overdue ' + (-dd) + 'd' : dd === 0 ? 'Remove today' : 'Remove ' + fmt(s.stentDue)) : 'No removal date') + '</span></div></div><button class="btn o sm" style="width:auto;padding:0 14px" data-act="stentOut" data-id="' + s.id + '">Removed</button></div>'; }).join('') : '') +
         '<div class="sec"><h2>Recent Patients</h2><button data-act="tab" data-v="patients">View all</button></div>' +
         (recent.length ? recent.map(ptile).join('') : emptyBox('users', 'No patients yet', 'Register your first patient to get started.', '<button class="btn" data-act="newPatient">Register Patient</button>')), true) + navbar('home'),
     acts: {
       searchP: () => { PSTATE.focus = true; setTab('patients'); },
       allSurg: () => go('allSurgeries'),
-      goBackup: () => go('backup'),
-      openSurg: el => go('profile', { id: +el.dataset.id, tab: 'surgery' }),
-      stentOut: async el => { if (await confirmDlg('Stent removed?', 'Mark this DJ stent as removed today.', 'Yes, removed')) { await Repo.removeStent(+el.dataset.id); toast('Marked removed'); refresh(); } }
+      goBackup: () => go('backup')
     }
   };
 };
