@@ -231,8 +231,8 @@ input[type=date].inp{min-height:50px;display:block;text-align:left;-webkit-min-l
 <script>
 'use strict';
 /* ===================== UroVault PWA - core: utils, icons, db, repo ===================== */
-const APP_VERSION = '1.3.0';
-const BUILD_ID = '20261111072514';
+const APP_VERSION = '1.3.1';
+const BUILD_ID = '20261111072644';
 const COPYRIGHT = '&copy; 2026 Dr. Devarsh Goyal. All rights reserved.';
 const copyFoot = () => '<div class="small" style="text-align:center;margin:22px 0 4px;opacity:.85">' + COPYRIGHT + '<br>UroVault v' + APP_VERSION + '</div>';
 
@@ -1657,19 +1657,21 @@ Views.backup = async () => {
 
 /* ---- settings ---- */
 Views.settings = async () => {
-  const [lockOn, demo, est, persisted, aiKey, aiModel] = await Promise.all([metaGet('lockOn'), Repo.hasDemo(), (navigator.storage && navigator.storage.estimate ? navigator.storage.estimate() : Promise.resolve(null)), (navigator.storage && navigator.storage.persisted ? navigator.storage.persisted() : Promise.resolve(false)), metaGet('aiKey'), metaGet('aiModel')]);
+  const [lockOn, demo, est, persisted, aiKey, aiModel, aiProv0] = await Promise.all([metaGet('lockOn'), Repo.hasDemo(), (navigator.storage && navigator.storage.estimate ? navigator.storage.estimate() : Promise.resolve(null)), (navigator.storage && navigator.storage.persisted ? navigator.storage.persisted() : Promise.resolve(false)), metaGet('aiKey'), metaGet('aiModel'), metaGet('aiProv')]);
+  const aiProv = aiProv0 || 'gemini';
   const on = lockOn !== false;
   return {
     html: hdr('Settings') + wrapPage(
       '<div class="card mrow"><div class="iconbox">' + ic('lock', 20) + '</div><div class="grow"><div class="t">Require password</div><div class="s">Asked on open and after 2 min away</div></div><button class="sw ' + (on ? 'on' : '') + '" data-act="lockTog" aria-label="Toggle"></button></div>' +
       mrow('chpw', 'edit', 'Change password') +
       '<div class="sec"><h2>App update</h2></div><div class="card"><div class="kv"><span>Installed version</span><span>v' + APP_VERSION + '</span></div><div class="kv"><span>Status</span><span>' + (UPDATE_AVAILABLE ? 'Update available' : 'Not checked / up to date') + '</span></div></div><div style="height:10px"></div><button class="btn" data-act="updCheck">' + ic('refresh', 18) + ' Check &amp; update to latest</button><div class="small" style="margin-top:8px">Always loads the newest version, even if the update banner did not appear. Your patient data stays safe.</div>' +
-      '<div class="sec"><h2>AI assistant (optional)</h2></div><div class="card"><div class="small" style="margin-bottom:8px">Used only for "Review with AI" in EAU Guidance. Your key is stored on this device only. Patient identity is never sent.</div><label class="lbl">Anthropic API key</label><input class="inp" type="password" id="aik" placeholder="sk-ant-..." value="' + esc(aiKey || '') + '" autocomplete="off"><label class="lbl">Model</label><input class="inp" id="aim" value="' + esc(aiModel || 'claude-sonnet-5-5') + '"><div style="height:10px"></div><button class="btn sm" data-act="aiSave">Save</button></div>' +
+      '<div class="sec"><h2>AI assistant (optional)</h2></div><div class="card"><div class="small" style="margin-bottom:8px">Used only for "Review with AI" in EAU Guidance. Your key is stored on this device only. Patient identity is never sent.</div><label class="lbl">Provider</label><div class="chips wrapchips" id="aip"><button type="button" class="chip sm ' + (aiProv === 'gemini' ? 'on' : '') + '" data-act="aiProv" data-p="gemini">Google Gemini (free tier)</button><button type="button" class="chip sm ' + (aiProv === 'anthropic' ? 'on' : '') + '" data-act="aiProv" data-p="anthropic">Anthropic</button></div><label class="lbl">API key</label><input class="inp" type="password" id="aik" placeholder="Paste API key" value="' + esc(aiKey || '') + '" autocomplete="off"><label class="lbl">Model</label><input class="inp" id="aim" value="' + esc(aiModel || (aiProv === 'gemini' ? 'gemini-2.5-flash' : 'claude-sonnet-5-5')) + '"><div style="height:10px"></div><button class="btn sm" data-act="aiSave">Save</button></div>' +
       '<div class="sec"><h2>Sample data</h2></div>' + (demo ? mrow('clearDemo', 'trash', 'Remove sample patients', 'Deletes the 4 demo records') : mrow('loadDemo', 'plusc', 'Load sample patients', 'Four fictional patients to explore the app')) +
       '<div class="sec"><h2>Storage</h2></div><div class="card"><div class="kv"><span>Used</span><span>' + (est ? (est.usage / 1048576).toFixed(1) + ' MB' : 'n/a') + '</span></div><div class="kv"><span>Protected from eviction</span><span>' + (persisted ? 'Yes' : 'Not guaranteed') + '</span></div></div>' +
       '<div class="sec"><h2>Danger zone</h2></div><button class="btn o" style="color:var(--redd);border-color:var(--red)" data-act="erase">' + ic('trash', 18) + ' Erase all data</button>'),
     acts: {
-      aiSave: async () => { await metaSet('aiKey', $('#aik').value.trim()); await metaSet('aiModel', $('#aim').value.trim() || 'claude-sonnet-5-5'); toast('Saved'); },
+      aiProv: async el => { await metaSet('aiProv', el.dataset.p); await metaSet('aiModel', ''); refresh(); },
+      aiSave: async () => { await metaSet('aiKey', $('#aik').value.trim()); await metaSet('aiModel', $('#aim').value.trim()); toast('Saved'); },
       updCheck: async () => { await checkUpdate(false); applyUpdate(); },
       lockTog: async () => { await metaSet('lockOn', !on); refresh(); },
       chpw: () => sheet('<h3>Change password</h3><label class="lbl">Current password</label><input class="inp" type="password" id="cp0"><label class="lbl">New password</label><input class="inp" type="password" id="cp1" placeholder="At least 6 characters"><label class="lbl">Confirm new password</label><input class="inp" type="password" id="cp2"><div class="ferr" id="cpe"></div><div style="height:14px"></div><button class="btn" id="cps">Update</button>', (s, close) => {
@@ -2157,8 +2159,16 @@ function aiPayload(p, kind, a, r) {
   if (r.miss.length) lines.push('Missing data: ' + [...new Set(r.miss)].join(', '));
   return lines.join('\n');
 }
-async function aiReview(text, key, model) {
+async function aiReview(text, key, model, prov) {
   const sys = 'You are a urology decision-support assistant for a resident doctor. You get de-identified clinical inputs and a rule-based EAU 2026 summary. Reply in concise English with three short headed lists: (1) Possible inconsistencies or data-entry doubts, (2) Missing information that could change management, (3) Questions to ask or investigations to consider. Base advice only on established EAU guideline principles, do not invent recommendations or numbers, say when unsure. The final decision rests with the treating doctor.';
+  if (prov === 'gemini') {
+    const m = model || 'gemini-2.5-flash';
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(m) + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify({ systemInstruction: { parts: [{ text: sys }] }, contents: [{ role: 'user', parts: [{ text }] }], generationConfig: { maxOutputTokens: 1200 } }) });
+    const j = await r.json();
+    if (!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status));
+    const c = j.candidates && j.candidates[0];
+    return ((c && c.content && c.content.parts) || []).map(x => x.text || '').join('\n').trim() || 'No response';
+  }
   const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify({ model: model || 'claude-sonnet-5-5', max_tokens: 900, system: sys, messages: [{ role: 'user', content: text }] }) });
   const j = await r.json();
   if (!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status));
@@ -2187,18 +2197,18 @@ Views.guide = async ({ pid, kind }) => {
       '<div class="phead" style="margin-bottom:4px"><div class="avatar">' + esc(initials(p.name)) + '</div><div><div class="t-name">' + esc(p.name) + '</div><div class="t-sub"><b>' + esc(p.uhid) + '</b> &middot; ' + p.age + 'y &middot; ' + G.name + '</div></div></div>' +
       '<div class="banner" style="margin-top:12px">' + ic('shield', 16) + ' On-device only. Nothing is sent anywhere.</div>' +
       '<div id="gq">' + form() + '</div><div style="height:6px"></div><div id="ga">' + result() + '</div>' +
-      '<div class="sec" style="margin:16px 0 8px"><h2>AI review (optional)</h2></div><div class="card"><div class="small" style="margin-bottom:10px">Sends only the answers above (no name, UHID, mobile or exact age) to Claude using your own API key, after you preview and approve it.</div><button class="btn o" data-act="aiGo">' + ic('book', 18) + ' Review with AI</button><div id="aiout"></div></div>' +
+      '<div class="sec" style="margin:16px 0 8px"><h2>AI review (optional)</h2></div><div class="card"><div class="small" style="margin-bottom:10px">Sends only the answers above (no name, UHID, mobile or exact age) to the AI provider you set, using your own API key, after you preview and approve it.</div><button class="btn o" data-act="aiGo">' + ic('book', 18) + ' Review with AI</button><div id="aiout"></div></div>' +
       '<div class="small" style="margin-top:18px;line-height:1.5">' + esc(EAU_VER) + '. Recommendations are paraphrased from the guidelines for decision support. They do not replace clinical judgement or the full guideline text - verify before acting. Answers are saved to this patient automatically.</div>'),
     acts: {
       aiGo: async () => {
         const key = await metaGet('aiKey');
-        if (!key) return alertDlg('AI not set up', 'Add your Anthropic API key in Settings > AI assistant first.');
-        const model = await metaGet('aiModel'); const text = aiPayload(p, kind, a, G.fn(a, p));
-        sheet('<h3>Review before sending</h3><div class="small" style="margin-bottom:8px">This exact text will be sent to Anthropic (api.anthropic.com). Nothing else is sent.</div><div class="card pre" style="max-height:38vh;overflow:auto;font-size:13px">' + esc(text) + '</div><div style="height:12px"></div><button class="btn" id="aiok">Send</button><button class="btn o" style="margin-top:8px" id="aino">Cancel</button>', (sh, close) => {
+        if (!key) return alertDlg('AI not set up', 'Add your API key in Settings > AI assistant first.');
+        const model = await metaGet('aiModel'); const prov = (await metaGet('aiProv')) || 'gemini'; const host = prov === 'gemini' ? 'generativelanguage.googleapis.com (Google)' : 'api.anthropic.com (Anthropic)'; const text = aiPayload(p, kind, a, G.fn(a, p));
+        sheet('<h3>Review before sending</h3><div class="small" style="margin-bottom:8px">This exact text will be sent to ' + host + '. Nothing else is sent.</div><div class="card pre" style="max-height:38vh;overflow:auto;font-size:13px">' + esc(text) + '</div><div style="height:12px"></div><button class="btn" id="aiok">Send</button><button class="btn o" style="margin-top:8px" id="aino">Cancel</button>', (sh, close) => {
           $('#aino', sh).onclick = close;
           $('#aiok', sh).onclick = async () => {
             close();
-            try { const out = await withBusy('Asking AI...', () => aiReview(text, key, model)); $('#aiout').innerHTML = '<div class="pre" style="margin-top:12px;font-size:14.5px">' + esc(out) + '</div><div class="small" style="margin-top:8px">AI-generated. Verify against the guideline.</div>'; await Repo.audit('ai_review', 'guidance', null, pid); }
+            try { const out = await withBusy('Asking AI...', () => aiReview(text, key, model, prov)); $('#aiout').innerHTML = '<div class="pre" style="margin-top:12px;font-size:14.5px">' + esc(out) + '</div><div class="small" style="margin-top:8px">AI-generated. Verify against the guideline.</div>'; await Repo.audit('ai_review', 'guidance', null, pid); }
             catch (e) { alertDlg('AI request failed', String(e.message || e)); }
           };
         });
