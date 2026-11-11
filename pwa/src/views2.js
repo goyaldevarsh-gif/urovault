@@ -63,7 +63,7 @@ Views.profile = async (params) => {
       const att = media.filter(m => m.refType === 'surgery' && m.refId === s.id);
       return '<div class="card tap" data-act="editSurg" data-id="' + s.id + '"><div style="display:flex;gap:10px;align-items:center"><div class="iconbox">' + ic('scalpel', 22) + '</div><div style="flex:1;min-width:0"><div class="t-name" style="white-space:normal">' + esc(s.procedure) + '</div><div class="t-sub">' + fmt(s.date) + '</div></div>' + ic('chev', 18) + '</div>' +
         (s.indication ? '<div class="small" style="margin-top:8px;color:var(--navy)">' + esc(s.indication) + '</div>' : '') +
-        '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' + (s.side ? '<span class="pill">' + esc(s.side) + '</span>' : '') + (s.duration ? '<span class="pill grey">' + fmtDur(s.duration) + '</span>' : '') + (assistants(s).length ? '<span class="pill grey">Asst: ' + esc(assistants(s).join(', ')) + '</span>' : '') + (s.hpe ? '<span class="pill">HPE</span>' : '') + (s.postop ? '<span class="pill grey">Post-op notes</span>' : '') + (att.length ? '<span class="pill grey">' + att.length + ' attachment' + (att.length > 1 ? 's' : '') + '</span>' : '') + '</div></div>';
+        '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' + (s.duration ? '<span class="pill grey">' + fmtDur(s.duration) + '</span>' : '') + (assistants(s).length ? '<span class="pill grey">Asst: ' + esc(assistants(s).join(', ')) + '</span>' : '') + (s.hpe ? '<span class="pill">HPE</span>' : '') + (s.postop ? '<span class="pill grey">Post-op notes</span>' : '') + (att.length ? '<span class="pill grey">' + att.length + ' attachment' + (att.length > 1 ? 's' : '') + '</span>' : '') + '</div></div>';
     }).join('') : emptyBox('scalpel', 'No surgeries recorded', 'Add the procedure, findings and histopathology.'));
   }
   async function fuTab() {
@@ -204,14 +204,13 @@ Views.surgeryForm = async ({ pid, id }) => {
   const pt = await Repo.patient(pid);
   const v = s || {};
   const media = s ? (await Repo.media(pid)).filter(m => m.refType === 'surgery' && m.refId === s.id) : [];
-  let cat = null, side = v.side || null;
+  let cat = null;
   const ta = (k, l, ph) => '<label class="lbl">' + l + '</label><textarea class="ta" id="' + k + '" style="min-height:84px" placeholder="' + ph + '">' + esc(v[k] || '') + '</textarea>';
   return {
     html: hdr(s ? 'Edit Surgery' : 'Add Surgery') + wrapPage(
       '<div class="card tile" style="margin:0 0 4px"><div class="avatar">' + esc(initials(pt.name)) + '</div><div class="grow"><div class="t-name">' + esc(pt.name) + '</div><div class="t-sub"><b>' + esc(pt.uhid) + '</b></div></div></div>' +
       '<label class="lbl" style="margin-top:4px">Procedure <i>*</i></label><div class="chips wrapchips" id="procs">' + PROCEDURES.map(x => '<button type="button" class="chip sm ' + (v.procedure === x ? 'on' : '') + '" data-p="' + esc(x) + '">' + esc(x) + '</button>').join('') + '</div>' +
       '<input class="inp" id="proc" style="margin-top:10px" placeholder="Procedure name (type or pick above)" value="' + esc(v.procedure || '') + '">' +
-      '<label class="lbl">Side</label><div class="chips wrapchips" id="sides">' + SIDES.map(x => '<button type="button" class="chip sm ' + (v.side === x ? 'on' : '') + '" data-sd="' + x + '">' + x + '</button>').join('') + '</div>' +
       '<label class="lbl">Date <i>*</i></label><input class="inp" type="date" id="sdate" value="' + (v.date || iso(today())) + '">' +
       '<label class="lbl">Duration of surgery (minutes)</label><input class="inp" id="duration" type="number" inputmode="numeric" min="0" max="1440" placeholder="e.g. 90" value="' + esc(v.duration || '') + '"><div class="small" id="durl" style="margin-top:5px">' + esc(fmtDur(v.duration)) + '</div>' +
       '<label class="lbl">Assistants</label>' + [1, 2, 3].map(n => '<input class="inp" id="assist' + n + '" style="margin-bottom:8px" placeholder="Assistant ' + n + '" value="' + esc(v['assist' + n] || '') + '">').join('') +
@@ -228,7 +227,7 @@ Views.surgeryForm = async ({ pid, id }) => {
         if (!date) return toast('Date is required');
         const st = Views._sst;
         await withBusy('Saving...', async () => {
-          const sid = await Repo.saveSurgery({ id: s ? s.id : undefined, createdAt: s ? s.createdAt : undefined, patientId: pid, procedure: proc, side, date, duration: $('#duration').value, assist1: $('#assist1').value, assist2: $('#assist2').value, assist3: $('#assist3').value, indication: $('#indication').value, findings: $('#findings').value, notes: $('#notes').value, hpe: $('#hpe').value, postop: $('#postop').value });
+          const sid = await Repo.saveSurgery({ id: s ? s.id : undefined, createdAt: s ? s.createdAt : undefined, patientId: pid, procedure: proc, date, duration: $('#duration').value, assist1: $('#assist1').value, assist2: $('#assist2').value, assist3: $('#assist3').value, indication: $('#indication').value, findings: $('#findings').value, notes: $('#notes').value, hpe: $('#hpe').value, postop: $('#postop').value });
           await saveStaged(st, { pid, category: cat || 'Other', takenAt: date, refType: 'surgery', refId: sid, caption: proc });
         });
         toast('Surgery saved'); back();
@@ -238,16 +237,7 @@ Views.surgeryForm = async ({ pid, id }) => {
     bind: root => {
       Views._sst = bindAttach($('#sattach'));
       $('#duration').oninput = e => { $('#durl').textContent = fmtDur(e.target.value); };
-      $('#procs').onclick = e => {
-        const b = e.target.closest('[data-p]'); if (!b) return; $('#proc').value = b.dataset.p; $$('#procs .chip').forEach(x => x.classList.toggle('on', x === b));
-        const pr = SURG_PRESETS[b.dataset.p]; if (!pr) return;
-        const prev = SURG_PRESETS[Views._lastPreset] || {}; let n = 0; ['indication', 'findings', 'notes', 'postop'].forEach(k => { const el = $('#' + k); if (pr[k] && (!el.value.trim() || el.value === prev[k])) { el.value = pr[k]; n++; } }); Views._lastPreset = b.dataset.p;
-        if (n) toast('Preset filled - complete the __ blanks');
-      };
-      $('#sides').onclick = e => { const b = e.target.closest('[data-sd]'); if (!b) return; side = side === b.dataset.sd ? null : b.dataset.sd; $$('#sides .chip').forEach(x => x.classList.toggle('on', x.dataset.sd === side)); };
-      $('#scats').onclick = e => { const c = e.target.closest('[data-c]'); if (!c) return; cat = c.dataset.c; $$('#scats .chip').forEach(x => x.classList.toggle('on', x === c)); };
-      const ex = $('#sex');
-      if (ex) ex.onclick = async e => { const b = e.target.closest('[data-del]'); if (!b) return; if (await confirmDlg('Remove attachment?', 'This cannot be undone.', 'Remove', true)) { await Repo.delMedia(media.find(x => x.id === +b.dataset.del)); b.parentElement.remove(); } };
+      $('#procs').onclick = e => { const b = e.target.closest('[data-p]'); if (!b) return; $('#proc').value = b.dataset.p; $$('#procs .chip').forEach(x => x.classList.toggle('on', x === b)); };
     }
   };
 };
@@ -307,7 +297,7 @@ async function logRows() {
   const l = await Repo.allSurgeries(); const q = LSTATE.q.trim().toLowerCase();
   return q ? l.filter(s => [s.procedure, s.pname, s.uhid, ...assistants(s)].some(x => x && String(x).toLowerCase().includes(q))) : l;
 }
-const logCard = s => '<div class="card tap" data-act="editLog" data-pid="' + s.patientId + '" data-id="' + s.id + '"><div style="display:flex;gap:10px;align-items:center"><div class="iconbox">' + ic('scalpel', 22) + '</div><div style="flex:1;min-width:0"><div class="t-name" style="white-space:normal">' + esc(s.procedure) + (s.side && s.side !== 'NA' ? ' <span class="pill">' + esc(s.side) + '</span>' : '') + '</div><div class="t-sub" style="white-space:normal"><b>' + esc(s.pname) + '</b><br>' + esc(s.uhid) + '</div></div><div style="text-align:right"><div class="small"><b style="color:var(--navy)">' + fmt(s.date) + '</b></div>' + (s.duration ? '<div class="small">' + fmtDur(s.duration) + '</div>' : '') + '</div></div>' +
+const logCard = s => '<div class="card tap" data-act="editLog" data-pid="' + s.patientId + '" data-id="' + s.id + '"><div style="display:flex;gap:10px;align-items:center"><div class="iconbox">' + ic('scalpel', 22) + '</div><div style="flex:1;min-width:0"><div class="t-name" style="white-space:normal">' + esc(s.procedure) + '</div><div class="t-sub" style="white-space:normal"><b>' + esc(s.pname) + '</b><br>' + esc(s.uhid) + '</div></div><div style="text-align:right"><div class="small"><b style="color:var(--navy)">' + fmt(s.date) + '</b></div>' + (s.duration ? '<div class="small">' + fmtDur(s.duration) + '</div>' : '') + '</div></div>' +
   (assistants(s).length ? '<div class="small" style="margin-top:8px;color:var(--navy)">Assistants: ' + esc(assistants(s).join(', ')) + '</div>' : '') + '</div>';
 Views.allSurgeries = async () => {
   const all = await Repo.allSurgeries(); const l = await logRows();
