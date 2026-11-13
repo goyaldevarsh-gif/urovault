@@ -2,6 +2,7 @@
 /* ===================== Cloud sync (Supabase, end-to-end encrypted) =====================
    Everything is encrypted on this device with your sync passphrase (AES-256-GCM) before upload.
    The server only ever stores ciphertext. Last write wins per record. */
+const SY_MAXBLOB = 45 * 1048576;
 const SY_URL = 'https://uyxsmsizvshlbynyrnuu.supabase.co', SY_KEY = 'sb_publishable_GGvo2WmhgWI5Zo_dvdpZnQ_NIvrlj6F';
 const SY = { cfg: null, key: null, q: {}, busy: false, applying: false, timer: null, err: '' };
 const SY_STORES = ['patients', 'investigations', 'surgeries', 'followups', 'notes', 'media'];
@@ -59,6 +60,7 @@ async function syPush() {
       const it = SY.q[k], p = k.split(':'), n = p[0], id = Number(p[1]);
       const rec = it.op === 'put' ? await dbGet(n, id) : null;
       if (!rec) { rows.push({ k, d: null, mt: it.mt, del: true, dev: SY.cfg.dev }); if (n === 'blobs') await syStorage('DELETE', id).catch(() => { }); }
+      else if (n === 'blobs' && rec.blob.size > SY_MAXBLOB) { sent.push([k, it.mt]); continue; }
       else if (n === 'blobs') {
         const up = await syStorage('POST', id, new Blob([await syEnc(new Uint8Array(await rec.blob.arrayBuffer()))]));
         if (!up.ok) throw new Error('Photo upload failed: ' + await syErr(up));

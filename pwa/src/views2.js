@@ -42,7 +42,7 @@ Views.profile = async (params) => {
     const counts = c => c === 'All' ? mediaCache.length : mediaCache.filter(m => m.category === c).length;
     const shown = mcat === 'All' ? mediaCache : mediaCache.filter(m => m.category === mcat);
     return '<div class="chips" id="mc" style="padding:12px 0 6px">' + ['All'].concat(MEDIA_CATS).map(c => '<button class="chip sm ' + (c === mcat ? 'on' : '') + '" data-act="mcat" data-c="' + c + '">' + c + '<span class="c">' + counts(c) + '</span></button>').join('') + '</div>' +
-      (shown.length ? '<div class="mgrid" style="margin-top:6px">' + shown.map(m => '<button class="mi ' + (m.kind === 'image' ? '' : 'file') + '" data-act="openMedia" data-id="' + m.id + '">' + (m.kind === 'image' && m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 28) + '<span>' + esc((m.name || '').slice(0, 18)) + '</span>') + '<div class="cap">' + esc(m.category) + ' &middot; ' + fmt(m.takenAt).slice(0, -5) + '</div></button>').join('') + '</div>' :
+      (shown.length ? '<div class="mgrid" style="margin-top:6px">' + shown.map(m => '<button class="mi ' + (m.thumb ? '' : 'file') + '" data-act="openMedia" data-id="' + m.id + '">' + (m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 28) + '<span>' + esc((m.name || '').slice(0, 18)) + '</span>') + '<div class="cap">' + esc(m.category) + ' &middot; ' + fmt(m.takenAt).slice(0, -5) + '</div></button>').join('') + '</div>' :
         emptyBox('image', mcat === 'All' ? 'No media yet' : 'No ' + mcat + ' items', 'Add clinical photos, scans or documents.'));
   }
   async function invTab() {
@@ -54,7 +54,7 @@ Views.profile = async (params) => {
         const att = media.filter(m => m.refType === 'investigation' && m.refId === i.id);
         return '<div class="card"><div style="display:flex;align-items:center;gap:12px;cursor:pointer" data-act="editInv" data-id="' + i.id + '"><div class="iconbox">' + ic(INV_ICON[i.name] || 'file', 22) + '</div><div style="flex:1;min-width:0"><div class="t-name">' + esc(i.name) + '</div><div class="t-sub">' + fmt(i.date) + '</div></div>' + ic('edit', 18) + '</div>' +
           (i.notes ? '<div class="pre small" style="margin-top:8px;color:var(--navy)">' + esc(i.notes) + '</div>' : '') +
-          (att.length ? '<div class="thumbs">' + att.map((m, k) => '<button class="th ' + (m.kind === 'image' ? '' : 'file') + '" data-act="openAtt" data-ref="' + i.id + '" data-k="' + k + '">' + (m.kind === 'image' && m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '</button>').join('') + '</div>' : '') + '</div>';
+          (att.length ? '<div class="thumbs">' + att.map((m, k) => '<button class="th ' + (m.thumb ? '' : 'file') + '" data-act="openAtt" data-ref="' + i.id + '" data-k="' + k + '">' + (m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '</button>').join('') + '</div>' : '') + '</div>';
       }).join('') : '<div class="card small" style="text-align:center">Nothing recorded. Tap a test above.</div>');
   }
   async function surgeryTab() {
@@ -175,7 +175,7 @@ async function invSheet(pid, o, done) {
     (name0 === 'Other' && !rec ? '<div class="lbl">Test name <i>*</i></div><input class="inp" id="iname" placeholder="e.g. Uroflowmetry">' : '') +
     '<div class="lbl">Date <i>*</i></div><input class="inp" type="date" id="idate" value="' + (rec ? rec.date : iso(today())) + '">' +
     '<div class="lbl">Result / notes</div><textarea class="ta" id="inotes" style="min-height:90px" placeholder="Key values, impression">' + esc(rec ? rec.notes || '' : '') + '</textarea>' +
-    (existing.length ? '<div class="lbl">Attached</div><div class="thumbs" id="iex">' + existing.map((m, k) => '<div class="th ' + (m.kind === 'image' ? '' : 'file') + '">' + (m.kind === 'image' && m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '<button class="x red" data-del="' + m.id + '">' + ic('x', 12) + '</button></div>').join('') + '</div>' : '') +
+    (existing.length ? '<div class="lbl">Attached</div><div class="thumbs" id="iex">' + existing.map((m, k) => '<div class="th ' + (m.thumb ? '' : 'file') + '">' + (m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '<button class="x red" data-del="' + m.id + '">' + ic('x', 12) + '</button></div>').join('') + '</div>' : '') +
     attachHtml('iattach', 'Attach report / images') + '<div style="height:16px"></div><button class="btn" id="isave">Save</button>' +
     (rec ? '<div style="height:10px"></div><button class="btn o" style="color:var(--redd);border-color:var(--red)" id="idel">Delete this record</button>' : ''), (s, close) => {
     const st = bindAttach($('#iattach', s));
@@ -216,7 +216,7 @@ Views.surgeryForm = async ({ pid, id }) => {
       '<label class="lbl">Assistants</label>' + [1, 2, 3].map(n => '<input class="inp" id="assist' + n + '" style="margin-bottom:8px" placeholder="Assistant ' + n + '" value="' + esc(v['assist' + n] || '') + '">').join('') +
       ta('indication', 'Indication', 'Why was it done?') + ta('findings', 'Operative findings', 'Findings') + ta('notes', 'Operative notes', 'Technique, complications') +
       ta('hpe', 'Histopathology (HPE)', 'Report summary') + ta('postop', 'Post-op notes', 'Recovery, catheter, discharge') +
-      (media.length ? '<div class="lbl">Attached</div><div class="thumbs" id="sex">' + media.map(m => '<div class="th ' + (m.kind === 'image' ? '' : 'file') + '">' + (m.kind === 'image' && m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '<button class="x red" data-del="' + m.id + '">' + ic('x', 12) + '</button></div>').join('') + '</div>' : '') +
+      (media.length ? '<div class="lbl">Attached</div><div class="thumbs" id="sex">' + media.map(m => '<div class="th ' + (m.thumb ? '' : 'file') + '">' + (m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '<button class="x red" data-del="' + m.id + '">' + ic('x', 12) + '</button></div>').join('') + '</div>' : '') +
       attachHtml('sattach', 'Photos / reports') + '<div class="lbl" style="margin-top:12px">Label new attachments as</div><div class="chips wrapchips" id="scats">' + chipsHtml(['Pre-op', 'Post-op', 'Other'], null, 'data-c') + '</div>' +
       (s ? '<div style="height:22px"></div><button class="btn o" style="color:var(--redd);border-color:var(--red)" data-act="del">Delete surgery</button>' : ''), true) +
       '<div class="bar"><div class="in"><button class="btn" data-act="save">Save Surgery</button></div></div>',
@@ -258,7 +258,7 @@ Views.visitForm = async ({ pid, id }) => {
       '<label class="lbl">Notes</label><textarea class="ta" id="vnotes" placeholder="Symptoms, examination, plan">' + esc(f ? f.notes || '' : '') + '</textarea>' +
       '<label class="lbl">Next follow-up</label><div class="chips wrapchips" id="vint">' + chipsHtml(INTERVALS.concat(['None']), f ? (f.nextDate ? null : 'None') : null, 'data-i') + '</div>' +
       '<input class="inp" type="date" id="vnext" style="margin-top:10px" value="' + (next || '') + '"><div class="small" id="vnl" style="margin-top:5px">' + (next ? 'Next: ' + fmt(next) : 'Pick an interval or a date') + '</div>' +
-      (media.length ? '<div class="lbl">Attached</div><div class="thumbs" id="vex">' + media.map(m => '<div class="th ' + (m.kind === 'image' ? '' : 'file') + '">' + (m.kind === 'image' && m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '<button class="x red" data-del="' + m.id + '">' + ic('x', 12) + '</button></div>').join('') + '</div>' : '') +
+      (media.length ? '<div class="lbl">Attached</div><div class="thumbs" id="vex">' + media.map(m => '<div class="th ' + (m.thumb ? '' : 'file') + '">' + (m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '<button class="x red" data-del="' + m.id + '">' + ic('x', 12) + '</button></div>').join('') + '</div>' : '') +
       attachHtml('vattach', 'Photos / reports') +
       (f ? '<div style="height:22px"></div><button class="btn o" style="color:var(--redd);border-color:var(--red)" data-act="del">Delete visit</button>' : ''), true) +
       '<div class="bar"><div class="in"><button class="btn" data-act="save">Save Visit</button></div></div>',

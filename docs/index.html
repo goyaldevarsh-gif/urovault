@@ -231,8 +231,8 @@ input[type=date].inp{min-height:50px;display:block;text-align:left;-webkit-min-l
 <script>
 'use strict';
 /* ===================== UroVault PWA - core: utils, icons, db, repo ===================== */
-const APP_VERSION = '1.8.1';
-const BUILD_ID = '20261111091410';
+const APP_VERSION = '1.9.0';
+const BUILD_ID = '20261113104756';
 const COPYRIGHT = '&copy; 2026 Dr. Devarsh Goyal. All rights reserved.';
 const copyFoot = () => '<div class="small" style="text-align:center;margin:22px 0 4px;opacity:.85">' + COPYRIGHT + '<br>UroVault v' + APP_VERSION + '</div>';
 
@@ -302,6 +302,8 @@ const initials = n => { const p = String(n || '').trim().split(/\s+/).filter(Boo
 const uhidKey = u => String(u || '').trim().toUpperCase().replace(/\s+/g, '');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const nn = v => { v = v == null ? '' : String(v).trim(); return v ? v : null; };
+const isVid = f => /^video\//.test(f.type || '') || /\.(mp4|mov|m4v|webm|3gp|mkv)$/i.test(f.name || '');
+const VID_KEEP = 15 * 1048576, VID_MAX = 60 * 1048576, VID_RAW_MAX = 700 * 1048576;
 const isImg = f => /^image\//.test(f.type || '') || /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(f.name || '');
 function csvCell(v) { v = String(v == null ? '' : v); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
 
@@ -430,6 +432,67 @@ async function processImage(file) {
     return { blob, thumb };
   } finally { URL.revokeObjectURL(u); }
 }
+
+/* ---------------- video ---------------- */
+const busyMsg = m => { const e = $('.busy .msg'); if (e) e.textContent = m; };
+function loadVideo(file) {
+  return new Promise((res, rej) => {
+    const u = URL.createObjectURL(file), v = document.createElement('video');
+    v.muted = true; v.playsInline = true; v.preload = 'auto'; v.setAttribute('playsinline', ''); v.setAttribute('muted', '');
+    const t = setTimeout(() => { URL.revokeObjectURL(u); rej(new Error('Could not read this video')); }, 30000);
+    v.onloadeddata = async () => {
+      if (!isFinite(v.duration)) { try { v.currentTime = 1e7; await new Promise(r => { v.ontimeupdate = r; setTimeout(r, 4000); }); v.currentTime = 0; } catch (e) { } }
+      clearTimeout(t); res({ v, u });
+    };
+    v.onerror = () => { clearTimeout(t); URL.revokeObjectURL(u); rej(new Error('This video format cannot be read on this device')); };
+    v.src = u;
+  });
+}
+async function videoThumb(v) {
+  try { v.currentTime = Math.min(1, (v.duration || 2) / 2); await new Promise(r => { v.onseeked = r; setTimeout(r, 2500); }); } catch (e) { }
+  const w = v.videoWidth || 320, h = v.videoHeight || 240, s = Math.min(1, 320 / Math.max(w, h));
+  const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * s)); c.height = Math.max(1, Math.round(h * s));
+  const x = c.getContext('2d'); x.fillStyle = '#111'; x.fillRect(0, 0, c.width, c.height);
+  try { x.drawImage(v, 0, 0, c.width, c.height); } catch (e) { }
+  const r = Math.min(c.width, c.height) * 0.16, cx = c.width / 2, cy = c.height / 2;
+  x.fillStyle = 'rgba(0,0,0,.55)'; x.beginPath(); x.arc(cx, cy, r * 1.5, 0, 7); x.fill();
+  x.fillStyle = '#fff'; x.beginPath(); x.moveTo(cx - r * .5, cy - r * .8); x.lineTo(cx - r * .5, cy + r * .8); x.lineTo(cx + r * .9, cy); x.closePath(); x.fill();
+  return c.toDataURL('image/jpeg', 0.7);
+}
+/** Re-encode to <=960px, ~1 Mbps, no audio (also keeps OR talk out). Real-time: takes about as long as the video. */
+async function shrinkVideo(v, dur) {
+  if (typeof MediaRecorder === 'undefined' || !HTMLCanvasElement.prototype.captureStream) return null;
+  const mime = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find(m => MediaRecorder.isTypeSupported(m));
+  if (!mime) return null;
+  const w = v.videoWidth, h = v.videoHeight, s = Math.min(1, 960 / Math.max(w, h));
+  const c = document.createElement('canvas'); c.width = Math.round(w * s / 2) * 2; c.height = Math.round(h * s / 2) * 2;
+  const x = c.getContext('2d'), rec = new MediaRecorder(c.captureStream(24), { mimeType: mime, videoBitsPerSecond: 1000000 });
+  const chunks = []; rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+  const done = new Promise(r => { rec.onstop = r; });
+  v.currentTime = 0; await new Promise(r => { v.onseeked = r; setTimeout(r, 1500); });
+  let stop = false; const draw = () => { if (stop) return; x.drawImage(v, 0, 0, c.width, c.height); (v.requestVideoFrameCallback ? v.requestVideoFrameCallback.bind(v) : requestAnimationFrame)(draw); };
+  rec.start(1000); await v.play(); draw();
+  const t0 = Date.now(), guard = setInterval(() => busyMsg('Compressing video... ' + Math.min(99, Math.round(v.currentTime / dur * 100)) + '%'), 700);
+  await new Promise(r => { v.onended = r; setTimeout(r, dur * 1000 * 1.5 + 15000); });
+  stop = true; clearInterval(guard); try { v.pause(); } catch (e) { }
+  rec.stop(); await done;
+  return new Blob(chunks, { type: mime.split(';')[0] });
+}
+async function processVideo(file) {
+  if (file.size > VID_RAW_MAX) throw new Error('Video is too large (' + Math.round(file.size / 1048576) + ' MB). Trim it to a shorter clip first.');
+  const { v, u } = await loadVideo(file);
+  try {
+    const thumb = await videoThumb(v);
+    let blob = file;
+    if (file.size > VID_KEEP) {
+      busyMsg('Compressing video... 0%');
+      let out = null; try { out = await shrinkVideo(v, v.duration || 1); } catch (e) { out = null; }
+      if (out && out.size > 0 && out.size < file.size) blob = out;
+    }
+    if (blob.size > VID_MAX) throw new Error('Video is still ' + Math.round(blob.size / 1048576) + ' MB after compression (limit ' + Math.round(VID_MAX / 1048576) + ' MB). Trim it to a shorter clip, or keep it in your phone Photos.');
+    return { blob: blob.type ? blob : new Blob([blob], { type: file.type || 'video/mp4' }), thumb };
+  } finally { v.removeAttribute('src'); v.load(); URL.revokeObjectURL(u); }
+}
 const _urls = new Map();
 async function blobUrl(id) {
   if (_urls.has(id)) return _urls.get(id);
@@ -502,6 +565,7 @@ const Repo = {
     const f = o.file;
     let blob = f, thumb = null, kind = 'file';
     if (isImg(f)) { const r = await processImage(f); blob = r.blob; thumb = r.thumb; kind = 'image'; }
+    else if (isVid(f)) { const r = await processVideo(f); blob = r.blob; thumb = r.thumb; kind = 'video'; }
     const id = await dbPut('media', {
       patientId: o.pid, kind, category: o.category || 'Other', caption: nn(o.caption), takenAt: o.takenAt || iso(today()),
       refType: o.refType || null, refId: o.refId || null, name: f.name || 'file', mime: blob.type || f.type || '', thumb, createdAt: new Date().toISOString()
@@ -710,6 +774,7 @@ const Auth = {
 /* ===================== Cloud sync (Supabase, end-to-end encrypted) =====================
    Everything is encrypted on this device with your sync passphrase (AES-256-GCM) before upload.
    The server only ever stores ciphertext. Last write wins per record. */
+const SY_MAXBLOB = 45 * 1048576;
 const SY_URL = 'https://uyxsmsizvshlbynyrnuu.supabase.co', SY_KEY = 'sb_publishable_GGvo2WmhgWI5Zo_dvdpZnQ_NIvrlj6F';
 const SY = { cfg: null, key: null, q: {}, busy: false, applying: false, timer: null, err: '' };
 const SY_STORES = ['patients', 'investigations', 'surgeries', 'followups', 'notes', 'media'];
@@ -767,6 +832,7 @@ async function syPush() {
       const it = SY.q[k], p = k.split(':'), n = p[0], id = Number(p[1]);
       const rec = it.op === 'put' ? await dbGet(n, id) : null;
       if (!rec) { rows.push({ k, d: null, mt: it.mt, del: true, dev: SY.cfg.dev }); if (n === 'blobs') await syStorage('DELETE', id).catch(() => { }); }
+      else if (n === 'blobs' && rec.blob.size > SY_MAXBLOB) { sent.push([k, it.mt]); continue; }
       else if (n === 'blobs') {
         const up = await syStorage('POST', id, new Blob([await syEnc(new Uint8Array(await rec.blob.arrayBuffer()))]));
         if (!up.ok) throw new Error('Photo upload failed: ' + await syErr(up));
@@ -1044,21 +1110,22 @@ function attachHtml(id, title) {
   return '<div id="' + id + '"><div class="lbl">' + esc(title || 'Attachments') + '</div><div class="row">' +
     '<button type="button" class="btn o sm" data-pk="cam">' + ic('camera', 16) + ' Camera</button>' +
     '<button type="button" class="btn o sm" data-pk="lib">' + ic('image', 16) + ' Photos</button>' +
+    '<button type="button" class="btn o sm" data-pk="vid">' + ic('camera', 16) + ' Video</button>' +
     '<button type="button" class="btn o sm" data-pk="file">' + ic('clip', 16) + ' File</button></div><div class="thumbs"></div></div>';
 }
 function bindAttach(root) {
   const st = { files: [] };
   const th = $('.thumbs', root);
   const draw = () => {
-    th.innerHTML = st.files.map((f, i) => '<div class="th ' + (f.img ? '' : 'file') + '">' + (f.img ? '<img alt="" src="' + f.url + '">' : ic('file', 22)) + '<button type="button" class="x" data-rm="' + i + '">' + ic('x', 12) + '</button></div>').join('');
+    th.innerHTML = st.files.map((f, i) => '<div class="th ' + (f.img ? '' : 'file') + '">' + (f.img ? '<img alt="" src="' + f.url + '">' : f.vid ? '<span class="small" style="font-weight:700">VIDEO<br>' + Math.round(f.file.size / 1048576) + ' MB</span>' : ic('file', 22)) + '<button type="button" class="x" data-rm="' + i + '">' + ic('x', 12) + '</button></div>').join('');
   };
   root.addEventListener('click', async e => {
     const rm = e.target.closest('[data-rm]');
     if (rm) { const f = st.files.splice(+rm.dataset.rm, 1)[0]; if (f.url) URL.revokeObjectURL(f.url); draw(); return; }
     const b = e.target.closest('[data-pk]'); if (!b) return;
     const k = b.dataset.pk;
-    const fs = await pickFiles(k === 'cam' ? { accept: 'image/*', capture: 'environment' } : k === 'lib' ? { accept: 'image/*', multiple: true } : { accept: 'image/*,application/pdf,.pdf,.doc,.docx,.txt', multiple: true });
-    fs.forEach(f => { const img = isImg(f); st.files.push({ file: f, img, url: img ? URL.createObjectURL(f) : '' }); });
+    const fs = await pickFiles(k === 'cam' ? { accept: 'image/*', capture: 'environment' } : k === 'lib' ? { accept: 'image/*', multiple: true } : k === 'vid' ? { accept: 'video/*', multiple: true } : { accept: 'image/*,application/pdf,.pdf,.doc,.docx,.txt', multiple: true });
+    fs.forEach(f => { const img = isImg(f); st.files.push({ file: f, img, vid: !img && isVid(f), url: img ? URL.createObjectURL(f) : '' }); });
     draw();
   });
   st.clear = () => { st.files.forEach(f => f.url && URL.revokeObjectURL(f.url)); st.files = []; draw(); };
@@ -1075,8 +1142,8 @@ async function saveStaged(st, o) {
 
 /* ---------- media thumbnails with existing attachments ---------- */
 function thumbsHtml(list, attr) {
-  return list.map((m, i) => '<div class="th ' + (m.kind === 'image' ? '' : 'file') + '" ' + (attr || '') + ' data-mi="' + i + '">' +
-    (m.kind === 'image' && m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '</div>').join('');
+  return list.map((m, i) => '<div class="th ' + (m.thumb ? '' : 'file') + '" ' + (attr || '') + ' data-mi="' + i + '">' +
+    (m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '</div>').join('');
 }
 
 /* ---------- viewer (zoom / pan / swipe) ---------- */
@@ -1092,7 +1159,7 @@ function openViewer(list, idx, done) {
     const url = await blobUrl(m.id);
     v.innerHTML = '<div class="vt"><button class="ib" data-v="close" aria-label="Close">' + ic('x', 22) + '</button><div class="cnt">' + (i + 1) + ' / ' + list.length + '</div>' +
       '<button class="ib" data-v="edit" aria-label="Edit">' + ic('edit', 20) + '</button><button class="ib" data-v="share" aria-label="Share">' + ic('share', 20) + '</button><button class="ib" data-v="del" aria-label="Delete">' + ic('trash', 20) + '</button></div>' +
-      '<div class="stage">' + (m.kind === 'image' ? '<img alt="" src="' + url + '">' :
+      '<div class="stage">' + (m.kind === 'image' ? '<img alt="" src="' + url + '">' : m.kind === 'video' && url ? '<video src="' + url + '" controls playsinline autoplay style="position:absolute;inset:0;width:100%;height:100%;background:#000"></video>' :
         '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;gap:14px;padding:30px;text-align:center">' + ic('file', 56) + '<div style="font-weight:600;overflow-wrap:anywhere">' + esc(m.name) + '</div><button class="btn" style="width:auto;padding:0 28px" data-v="share">Open / Share</button></div>') +
       (list.length > 1 ? '<button class="nav" style="left:0;border-radius:0 12px 12px 0" data-v="prev">' + ic('left', 22) + '</button><button class="nav" style="right:0;border-radius:12px 0 0 12px" data-v="next">' + ic('right', 22) + '</button>' : '') + '</div>' +
       '<div class="vb"><b>' + esc(m.category) + '</b> &middot; ' + fmt(m.takenAt) + (m.caption ? '<div style="margin-top:4px;opacity:.9">' + esc(m.caption) + '</div>' : '') + '</div>';
@@ -1522,7 +1589,7 @@ Views.profile = async (params) => {
     const counts = c => c === 'All' ? mediaCache.length : mediaCache.filter(m => m.category === c).length;
     const shown = mcat === 'All' ? mediaCache : mediaCache.filter(m => m.category === mcat);
     return '<div class="chips" id="mc" style="padding:12px 0 6px">' + ['All'].concat(MEDIA_CATS).map(c => '<button class="chip sm ' + (c === mcat ? 'on' : '') + '" data-act="mcat" data-c="' + c + '">' + c + '<span class="c">' + counts(c) + '</span></button>').join('') + '</div>' +
-      (shown.length ? '<div class="mgrid" style="margin-top:6px">' + shown.map(m => '<button class="mi ' + (m.kind === 'image' ? '' : 'file') + '" data-act="openMedia" data-id="' + m.id + '">' + (m.kind === 'image' && m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 28) + '<span>' + esc((m.name || '').slice(0, 18)) + '</span>') + '<div class="cap">' + esc(m.category) + ' &middot; ' + fmt(m.takenAt).slice(0, -5) + '</div></button>').join('') + '</div>' :
+      (shown.length ? '<div class="mgrid" style="margin-top:6px">' + shown.map(m => '<button class="mi ' + (m.thumb ? '' : 'file') + '" data-act="openMedia" data-id="' + m.id + '">' + (m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 28) + '<span>' + esc((m.name || '').slice(0, 18)) + '</span>') + '<div class="cap">' + esc(m.category) + ' &middot; ' + fmt(m.takenAt).slice(0, -5) + '</div></button>').join('') + '</div>' :
         emptyBox('image', mcat === 'All' ? 'No media yet' : 'No ' + mcat + ' items', 'Add clinical photos, scans or documents.'));
   }
   async function invTab() {
@@ -1534,7 +1601,7 @@ Views.profile = async (params) => {
         const att = media.filter(m => m.refType === 'investigation' && m.refId === i.id);
         return '<div class="card"><div style="display:flex;align-items:center;gap:12px;cursor:pointer" data-act="editInv" data-id="' + i.id + '"><div class="iconbox">' + ic(INV_ICON[i.name] || 'file', 22) + '</div><div style="flex:1;min-width:0"><div class="t-name">' + esc(i.name) + '</div><div class="t-sub">' + fmt(i.date) + '</div></div>' + ic('edit', 18) + '</div>' +
           (i.notes ? '<div class="pre small" style="margin-top:8px;color:var(--navy)">' + esc(i.notes) + '</div>' : '') +
-          (att.length ? '<div class="thumbs">' + att.map((m, k) => '<button class="th ' + (m.kind === 'image' ? '' : 'file') + '" data-act="openAtt" data-ref="' + i.id + '" data-k="' + k + '">' + (m.kind === 'image' && m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '</button>').join('') + '</div>' : '') + '</div>';
+          (att.length ? '<div class="thumbs">' + att.map((m, k) => '<button class="th ' + (m.thumb ? '' : 'file') + '" data-act="openAtt" data-ref="' + i.id + '" data-k="' + k + '">' + (m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '</button>').join('') + '</div>' : '') + '</div>';
       }).join('') : '<div class="card small" style="text-align:center">Nothing recorded. Tap a test above.</div>');
   }
   async function surgeryTab() {
@@ -1655,7 +1722,7 @@ async function invSheet(pid, o, done) {
     (name0 === 'Other' && !rec ? '<div class="lbl">Test name <i>*</i></div><input class="inp" id="iname" placeholder="e.g. Uroflowmetry">' : '') +
     '<div class="lbl">Date <i>*</i></div><input class="inp" type="date" id="idate" value="' + (rec ? rec.date : iso(today())) + '">' +
     '<div class="lbl">Result / notes</div><textarea class="ta" id="inotes" style="min-height:90px" placeholder="Key values, impression">' + esc(rec ? rec.notes || '' : '') + '</textarea>' +
-    (existing.length ? '<div class="lbl">Attached</div><div class="thumbs" id="iex">' + existing.map((m, k) => '<div class="th ' + (m.kind === 'image' ? '' : 'file') + '">' + (m.kind === 'image' && m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '<button class="x red" data-del="' + m.id + '">' + ic('x', 12) + '</button></div>').join('') + '</div>' : '') +
+    (existing.length ? '<div class="lbl">Attached</div><div class="thumbs" id="iex">' + existing.map((m, k) => '<div class="th ' + (m.thumb ? '' : 'file') + '">' + (m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '<button class="x red" data-del="' + m.id + '">' + ic('x', 12) + '</button></div>').join('') + '</div>' : '') +
     attachHtml('iattach', 'Attach report / images') + '<div style="height:16px"></div><button class="btn" id="isave">Save</button>' +
     (rec ? '<div style="height:10px"></div><button class="btn o" style="color:var(--redd);border-color:var(--red)" id="idel">Delete this record</button>' : ''), (s, close) => {
     const st = bindAttach($('#iattach', s));
@@ -1696,7 +1763,7 @@ Views.surgeryForm = async ({ pid, id }) => {
       '<label class="lbl">Assistants</label>' + [1, 2, 3].map(n => '<input class="inp" id="assist' + n + '" style="margin-bottom:8px" placeholder="Assistant ' + n + '" value="' + esc(v['assist' + n] || '') + '">').join('') +
       ta('indication', 'Indication', 'Why was it done?') + ta('findings', 'Operative findings', 'Findings') + ta('notes', 'Operative notes', 'Technique, complications') +
       ta('hpe', 'Histopathology (HPE)', 'Report summary') + ta('postop', 'Post-op notes', 'Recovery, catheter, discharge') +
-      (media.length ? '<div class="lbl">Attached</div><div class="thumbs" id="sex">' + media.map(m => '<div class="th ' + (m.kind === 'image' ? '' : 'file') + '">' + (m.kind === 'image' && m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '<button class="x red" data-del="' + m.id + '">' + ic('x', 12) + '</button></div>').join('') + '</div>' : '') +
+      (media.length ? '<div class="lbl">Attached</div><div class="thumbs" id="sex">' + media.map(m => '<div class="th ' + (m.thumb ? '' : 'file') + '">' + (m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '<button class="x red" data-del="' + m.id + '">' + ic('x', 12) + '</button></div>').join('') + '</div>' : '') +
       attachHtml('sattach', 'Photos / reports') + '<div class="lbl" style="margin-top:12px">Label new attachments as</div><div class="chips wrapchips" id="scats">' + chipsHtml(['Pre-op', 'Post-op', 'Other'], null, 'data-c') + '</div>' +
       (s ? '<div style="height:22px"></div><button class="btn o" style="color:var(--redd);border-color:var(--red)" data-act="del">Delete surgery</button>' : ''), true) +
       '<div class="bar"><div class="in"><button class="btn" data-act="save">Save Surgery</button></div></div>',
@@ -1738,7 +1805,7 @@ Views.visitForm = async ({ pid, id }) => {
       '<label class="lbl">Notes</label><textarea class="ta" id="vnotes" placeholder="Symptoms, examination, plan">' + esc(f ? f.notes || '' : '') + '</textarea>' +
       '<label class="lbl">Next follow-up</label><div class="chips wrapchips" id="vint">' + chipsHtml(INTERVALS.concat(['None']), f ? (f.nextDate ? null : 'None') : null, 'data-i') + '</div>' +
       '<input class="inp" type="date" id="vnext" style="margin-top:10px" value="' + (next || '') + '"><div class="small" id="vnl" style="margin-top:5px">' + (next ? 'Next: ' + fmt(next) : 'Pick an interval or a date') + '</div>' +
-      (media.length ? '<div class="lbl">Attached</div><div class="thumbs" id="vex">' + media.map(m => '<div class="th ' + (m.kind === 'image' ? '' : 'file') + '">' + (m.kind === 'image' && m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '<button class="x red" data-del="' + m.id + '">' + ic('x', 12) + '</button></div>').join('') + '</div>' : '') +
+      (media.length ? '<div class="lbl">Attached</div><div class="thumbs" id="vex">' + media.map(m => '<div class="th ' + (m.thumb ? '' : 'file') + '">' + (m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '<button class="x red" data-del="' + m.id + '">' + ic('x', 12) + '</button></div>').join('') + '</div>' : '') +
       attachHtml('vattach', 'Photos / reports') +
       (f ? '<div style="height:22px"></div><button class="btn o" style="color:var(--redd);border-color:var(--red)" data-act="del">Delete visit</button>' : ''), true) +
       '<div class="bar"><div class="in"><button class="btn" data-act="save">Save Visit</button></div></div>',

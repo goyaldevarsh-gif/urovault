@@ -1,6 +1,6 @@
 'use strict';
 /* ===================== UroVault PWA - core: utils, icons, db, repo ===================== */
-const APP_VERSION = '1.8.1';
+const APP_VERSION = '1.9.0';
 const BUILD_ID = '__BUILD__';
 const COPYRIGHT = '&copy; 2026 Dr. Devarsh Goyal. All rights reserved.';
 const copyFoot = () => '<div class="small" style="text-align:center;margin:22px 0 4px;opacity:.85">' + COPYRIGHT + '<br>UroVault v' + APP_VERSION + '</div>';
@@ -71,6 +71,8 @@ const initials = n => { const p = String(n || '').trim().split(/\s+/).filter(Boo
 const uhidKey = u => String(u || '').trim().toUpperCase().replace(/\s+/g, '');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const nn = v => { v = v == null ? '' : String(v).trim(); return v ? v : null; };
+const isVid = f => /^video\//.test(f.type || '') || /\.(mp4|mov|m4v|webm|3gp|mkv)$/i.test(f.name || '');
+const VID_KEEP = 15 * 1048576, VID_MAX = 60 * 1048576, VID_RAW_MAX = 700 * 1048576;
 const isImg = f => /^image\//.test(f.type || '') || /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(f.name || '');
 function csvCell(v) { v = String(v == null ? '' : v); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
 
@@ -199,6 +201,67 @@ async function processImage(file) {
     return { blob, thumb };
   } finally { URL.revokeObjectURL(u); }
 }
+
+/* ---------------- video ---------------- */
+const busyMsg = m => { const e = $('.busy .msg'); if (e) e.textContent = m; };
+function loadVideo(file) {
+  return new Promise((res, rej) => {
+    const u = URL.createObjectURL(file), v = document.createElement('video');
+    v.muted = true; v.playsInline = true; v.preload = 'auto'; v.setAttribute('playsinline', ''); v.setAttribute('muted', '');
+    const t = setTimeout(() => { URL.revokeObjectURL(u); rej(new Error('Could not read this video')); }, 30000);
+    v.onloadeddata = async () => {
+      if (!isFinite(v.duration)) { try { v.currentTime = 1e7; await new Promise(r => { v.ontimeupdate = r; setTimeout(r, 4000); }); v.currentTime = 0; } catch (e) { } }
+      clearTimeout(t); res({ v, u });
+    };
+    v.onerror = () => { clearTimeout(t); URL.revokeObjectURL(u); rej(new Error('This video format cannot be read on this device')); };
+    v.src = u;
+  });
+}
+async function videoThumb(v) {
+  try { v.currentTime = Math.min(1, (v.duration || 2) / 2); await new Promise(r => { v.onseeked = r; setTimeout(r, 2500); }); } catch (e) { }
+  const w = v.videoWidth || 320, h = v.videoHeight || 240, s = Math.min(1, 320 / Math.max(w, h));
+  const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * s)); c.height = Math.max(1, Math.round(h * s));
+  const x = c.getContext('2d'); x.fillStyle = '#111'; x.fillRect(0, 0, c.width, c.height);
+  try { x.drawImage(v, 0, 0, c.width, c.height); } catch (e) { }
+  const r = Math.min(c.width, c.height) * 0.16, cx = c.width / 2, cy = c.height / 2;
+  x.fillStyle = 'rgba(0,0,0,.55)'; x.beginPath(); x.arc(cx, cy, r * 1.5, 0, 7); x.fill();
+  x.fillStyle = '#fff'; x.beginPath(); x.moveTo(cx - r * .5, cy - r * .8); x.lineTo(cx - r * .5, cy + r * .8); x.lineTo(cx + r * .9, cy); x.closePath(); x.fill();
+  return c.toDataURL('image/jpeg', 0.7);
+}
+/** Re-encode to <=960px, ~1 Mbps, no audio (also keeps OR talk out). Real-time: takes about as long as the video. */
+async function shrinkVideo(v, dur) {
+  if (typeof MediaRecorder === 'undefined' || !HTMLCanvasElement.prototype.captureStream) return null;
+  const mime = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find(m => MediaRecorder.isTypeSupported(m));
+  if (!mime) return null;
+  const w = v.videoWidth, h = v.videoHeight, s = Math.min(1, 960 / Math.max(w, h));
+  const c = document.createElement('canvas'); c.width = Math.round(w * s / 2) * 2; c.height = Math.round(h * s / 2) * 2;
+  const x = c.getContext('2d'), rec = new MediaRecorder(c.captureStream(24), { mimeType: mime, videoBitsPerSecond: 1000000 });
+  const chunks = []; rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+  const done = new Promise(r => { rec.onstop = r; });
+  v.currentTime = 0; await new Promise(r => { v.onseeked = r; setTimeout(r, 1500); });
+  let stop = false; const draw = () => { if (stop) return; x.drawImage(v, 0, 0, c.width, c.height); (v.requestVideoFrameCallback ? v.requestVideoFrameCallback.bind(v) : requestAnimationFrame)(draw); };
+  rec.start(1000); await v.play(); draw();
+  const t0 = Date.now(), guard = setInterval(() => busyMsg('Compressing video... ' + Math.min(99, Math.round(v.currentTime / dur * 100)) + '%'), 700);
+  await new Promise(r => { v.onended = r; setTimeout(r, dur * 1000 * 1.5 + 15000); });
+  stop = true; clearInterval(guard); try { v.pause(); } catch (e) { }
+  rec.stop(); await done;
+  return new Blob(chunks, { type: mime.split(';')[0] });
+}
+async function processVideo(file) {
+  if (file.size > VID_RAW_MAX) throw new Error('Video is too large (' + Math.round(file.size / 1048576) + ' MB). Trim it to a shorter clip first.');
+  const { v, u } = await loadVideo(file);
+  try {
+    const thumb = await videoThumb(v);
+    let blob = file;
+    if (file.size > VID_KEEP) {
+      busyMsg('Compressing video... 0%');
+      let out = null; try { out = await shrinkVideo(v, v.duration || 1); } catch (e) { out = null; }
+      if (out && out.size > 0 && out.size < file.size) blob = out;
+    }
+    if (blob.size > VID_MAX) throw new Error('Video is still ' + Math.round(blob.size / 1048576) + ' MB after compression (limit ' + Math.round(VID_MAX / 1048576) + ' MB). Trim it to a shorter clip, or keep it in your phone Photos.');
+    return { blob: blob.type ? blob : new Blob([blob], { type: file.type || 'video/mp4' }), thumb };
+  } finally { v.removeAttribute('src'); v.load(); URL.revokeObjectURL(u); }
+}
 const _urls = new Map();
 async function blobUrl(id) {
   if (_urls.has(id)) return _urls.get(id);
@@ -271,6 +334,7 @@ const Repo = {
     const f = o.file;
     let blob = f, thumb = null, kind = 'file';
     if (isImg(f)) { const r = await processImage(f); blob = r.blob; thumb = r.thumb; kind = 'image'; }
+    else if (isVid(f)) { const r = await processVideo(f); blob = r.blob; thumb = r.thumb; kind = 'video'; }
     const id = await dbPut('media', {
       patientId: o.pid, kind, category: o.category || 'Other', caption: nn(o.caption), takenAt: o.takenAt || iso(today()),
       refType: o.refType || null, refId: o.refId || null, name: f.name || 'file', mime: blob.type || f.type || '', thumb, createdAt: new Date().toISOString()

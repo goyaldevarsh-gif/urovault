@@ -141,21 +141,22 @@ function attachHtml(id, title) {
   return '<div id="' + id + '"><div class="lbl">' + esc(title || 'Attachments') + '</div><div class="row">' +
     '<button type="button" class="btn o sm" data-pk="cam">' + ic('camera', 16) + ' Camera</button>' +
     '<button type="button" class="btn o sm" data-pk="lib">' + ic('image', 16) + ' Photos</button>' +
+    '<button type="button" class="btn o sm" data-pk="vid">' + ic('camera', 16) + ' Video</button>' +
     '<button type="button" class="btn o sm" data-pk="file">' + ic('clip', 16) + ' File</button></div><div class="thumbs"></div></div>';
 }
 function bindAttach(root) {
   const st = { files: [] };
   const th = $('.thumbs', root);
   const draw = () => {
-    th.innerHTML = st.files.map((f, i) => '<div class="th ' + (f.img ? '' : 'file') + '">' + (f.img ? '<img alt="" src="' + f.url + '">' : ic('file', 22)) + '<button type="button" class="x" data-rm="' + i + '">' + ic('x', 12) + '</button></div>').join('');
+    th.innerHTML = st.files.map((f, i) => '<div class="th ' + (f.img ? '' : 'file') + '">' + (f.img ? '<img alt="" src="' + f.url + '">' : f.vid ? '<span class="small" style="font-weight:700">VIDEO<br>' + Math.round(f.file.size / 1048576) + ' MB</span>' : ic('file', 22)) + '<button type="button" class="x" data-rm="' + i + '">' + ic('x', 12) + '</button></div>').join('');
   };
   root.addEventListener('click', async e => {
     const rm = e.target.closest('[data-rm]');
     if (rm) { const f = st.files.splice(+rm.dataset.rm, 1)[0]; if (f.url) URL.revokeObjectURL(f.url); draw(); return; }
     const b = e.target.closest('[data-pk]'); if (!b) return;
     const k = b.dataset.pk;
-    const fs = await pickFiles(k === 'cam' ? { accept: 'image/*', capture: 'environment' } : k === 'lib' ? { accept: 'image/*', multiple: true } : { accept: 'image/*,application/pdf,.pdf,.doc,.docx,.txt', multiple: true });
-    fs.forEach(f => { const img = isImg(f); st.files.push({ file: f, img, url: img ? URL.createObjectURL(f) : '' }); });
+    const fs = await pickFiles(k === 'cam' ? { accept: 'image/*', capture: 'environment' } : k === 'lib' ? { accept: 'image/*', multiple: true } : k === 'vid' ? { accept: 'video/*', multiple: true } : { accept: 'image/*,application/pdf,.pdf,.doc,.docx,.txt', multiple: true });
+    fs.forEach(f => { const img = isImg(f); st.files.push({ file: f, img, vid: !img && isVid(f), url: img ? URL.createObjectURL(f) : '' }); });
     draw();
   });
   st.clear = () => { st.files.forEach(f => f.url && URL.revokeObjectURL(f.url)); st.files = []; draw(); };
@@ -172,8 +173,8 @@ async function saveStaged(st, o) {
 
 /* ---------- media thumbnails with existing attachments ---------- */
 function thumbsHtml(list, attr) {
-  return list.map((m, i) => '<div class="th ' + (m.kind === 'image' ? '' : 'file') + '" ' + (attr || '') + ' data-mi="' + i + '">' +
-    (m.kind === 'image' && m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '</div>').join('');
+  return list.map((m, i) => '<div class="th ' + (m.thumb ? '' : 'file') + '" ' + (attr || '') + ' data-mi="' + i + '">' +
+    (m.thumb ? '<img alt="" src="' + m.thumb + '">' : ic('file', 22)) + '</div>').join('');
 }
 
 /* ---------- viewer (zoom / pan / swipe) ---------- */
@@ -189,7 +190,7 @@ function openViewer(list, idx, done) {
     const url = await blobUrl(m.id);
     v.innerHTML = '<div class="vt"><button class="ib" data-v="close" aria-label="Close">' + ic('x', 22) + '</button><div class="cnt">' + (i + 1) + ' / ' + list.length + '</div>' +
       '<button class="ib" data-v="edit" aria-label="Edit">' + ic('edit', 20) + '</button><button class="ib" data-v="share" aria-label="Share">' + ic('share', 20) + '</button><button class="ib" data-v="del" aria-label="Delete">' + ic('trash', 20) + '</button></div>' +
-      '<div class="stage">' + (m.kind === 'image' ? '<img alt="" src="' + url + '">' :
+      '<div class="stage">' + (m.kind === 'image' ? '<img alt="" src="' + url + '">' : m.kind === 'video' && url ? '<video src="' + url + '" controls playsinline autoplay style="position:absolute;inset:0;width:100%;height:100%;background:#000"></video>' :
         '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;gap:14px;padding:30px;text-align:center">' + ic('file', 56) + '<div style="font-weight:600;overflow-wrap:anywhere">' + esc(m.name) + '</div><button class="btn" style="width:auto;padding:0 28px" data-v="share">Open / Share</button></div>') +
       (list.length > 1 ? '<button class="nav" style="left:0;border-radius:0 12px 12px 0" data-v="prev">' + ic('left', 22) + '</button><button class="nav" style="right:0;border-radius:12px 0 0 12px" data-v="next">' + ic('right', 22) + '</button>' : '') + '</div>' +
       '<div class="vb"><b>' + esc(m.category) + '</b> &middot; ' + fmt(m.takenAt) + (m.caption ? '<div style="margin-top:4px;opacity:.9">' + esc(m.caption) + '</div>' : '') + '</div>';
